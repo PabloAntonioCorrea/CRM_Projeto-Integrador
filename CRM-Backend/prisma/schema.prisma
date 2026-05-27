@@ -1,0 +1,200 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum PerfilAcesso {
+  Administrador
+  Usuario
+}
+
+enum LeadStatus {
+  Ativo
+  Inativo
+}
+
+enum Prioridade {
+  Baixa
+  Media
+  Alta
+}
+
+enum InteracaoTipo {
+  Ligacao
+  Email
+  Reuniao
+  Nota
+  Registro
+}
+
+enum TarefaStatus {
+  Pendente
+  Concluida
+}
+
+enum PropostaStatus {
+  Rascunho
+  Enviada
+  EmNegociacao
+  Aceita
+  Recusada
+}
+
+model Usuario {
+  id            Int            @id @default(autoincrement()) @db.UnsignedInt
+  nome          String         @db.VarChar(120)
+  email         String         @unique @db.VarChar(180)
+  cargo         String         @db.VarChar(80)
+  senha         String         @db.VarChar(255)
+  perfilAcesso  PerfilAcesso   @default(Usuario) @map("perfil_acesso")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  leads         Lead[]
+  oportunidades Oportunidade[]
+  interacoes    Interacao[]
+  tarefas       Tarefa[]
+  propostas     Proposta[]
+
+  @@map("usuario")
+}
+
+model MotivoPerda {
+  id            Int            @id @default(autoincrement()) @db.UnsignedInt
+  nome          String         @unique @db.VarChar(120)
+  ativo         Boolean        @default(true)
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  oportunidades Oportunidade[]
+
+  @@map("motivo_perda")
+}
+
+model EtapaFunil {
+  id            Int            @id @default(autoincrement()) @db.UnsignedInt
+  nome          String         @unique @db.VarChar(80)
+  ordem         Int            @unique @db.UnsignedTinyInt
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  oportunidades Oportunidade[]
+
+  @@map("etapa_funil")
+}
+
+model Lead {
+  id            Int          @id @default(autoincrement()) @db.UnsignedInt
+  nome          String       @db.VarChar(120)
+  email         String?      @db.VarChar(180)
+  telefone      String?      @db.VarChar(30)
+  empresa       String?      @db.VarChar(120)
+  cidade        String?      @db.VarChar(80)
+  nicho         String?      @db.VarChar(80)
+  observacoes   String?      @db.Text
+  status        LeadStatus   @default(Ativo)
+  dataCadastro  DateTime     @map("data_cadastro") @db.Date
+  usuarioId     Int          @map("usuario_id") @db.UnsignedInt
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+  usuario       Usuario      @relation(fields: [usuarioId], references: [id])
+  oportunidades Oportunidade[]
+  interacoes    Interacao[]
+  tarefas       Tarefa[]
+
+  @@index([usuarioId])
+  @@index([dataCadastro])
+  @@index([status])
+  @@map("lead")
+}
+
+model Oportunidade {
+  id             Int        @id @default(autoincrement()) @db.UnsignedInt
+  titulo         String     @db.VarChar(160)
+  valorEstimado  Decimal    @default(0) @map("valor_estimado") @db.Decimal(12, 2)
+  prioridade      Prioridade   @default(Media)
+  motivoPerdaId   Int?         @map("motivo_perda_id") @db.UnsignedInt
+  dataCriacao     DateTime     @default(now()) @map("data_criacao")
+  usuarioId      Int        @map("usuario_id") @db.UnsignedInt
+  leadId         Int        @map("lead_id") @db.UnsignedInt
+  etapaFunilId   Int        @map("etapa_funil_id") @db.UnsignedInt
+  createdAt      DateTime   @default(now()) @map("created_at")
+  updatedAt      DateTime   @updatedAt @map("updated_at")
+  usuario        Usuario    @relation(fields: [usuarioId], references: [id])
+  lead           Lead        @relation(fields: [leadId], references: [id])
+  etapaFunil      EtapaFunil   @relation(fields: [etapaFunilId], references: [id])
+  motivoPerda     MotivoPerda? @relation(fields: [motivoPerdaId], references: [id], onDelete: SetNull)
+  interacoes      Interacao[]
+  tarefas         Tarefa[]
+  propostas       Proposta[]
+
+  @@index([usuarioId])
+  @@index([leadId])
+  @@index([etapaFunilId])
+  @@index([motivoPerdaId])
+  @@map("oportunidade")
+}
+
+model Proposta {
+  id              Int            @id @default(autoincrement()) @db.UnsignedInt
+  titulo          String         @db.VarChar(160)
+  valor           Decimal        @default(0) @db.Decimal(12, 2)
+  status          PropostaStatus @default(Rascunho)
+  dataProposta    DateTime       @map("data_proposta") @db.Date
+  oportunidadeId  Int            @map("oportunidade_id") @db.UnsignedInt
+  usuarioId       Int            @map("usuario_id") @db.UnsignedInt
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+  oportunidade    Oportunidade   @relation(fields: [oportunidadeId], references: [id], onDelete: Cascade)
+  usuario         Usuario        @relation(fields: [usuarioId], references: [id])
+
+  @@index([oportunidadeId])
+  @@index([usuarioId])
+  @@index([dataProposta])
+  @@map("proposta")
+}
+
+model Tarefa {
+  id              Int          @id @default(autoincrement()) @db.UnsignedInt
+  titulo          String       @db.VarChar(160)
+  descricao       String?      @db.Text
+  dataPrazo       DateTime     @map("data_prazo") @db.Date
+  status          TarefaStatus @default(Pendente)
+  leadId          Int          @map("lead_id") @db.UnsignedInt
+  oportunidadeId  Int?         @map("oportunidade_id") @db.UnsignedInt
+  usuarioId       Int          @map("usuario_id") @db.UnsignedInt
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+  lead            Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  oportunidade    Oportunidade? @relation(fields: [oportunidadeId], references: [id], onDelete: SetNull)
+  usuario         Usuario      @relation(fields: [usuarioId], references: [id])
+
+  @@index([leadId])
+  @@index([oportunidadeId])
+  @@index([usuarioId])
+  @@index([dataPrazo])
+  @@index([status])
+  @@map("tarefa")
+}
+
+model Interacao {
+  id              Int            @id @default(autoincrement()) @db.UnsignedInt
+  tipo            InteracaoTipo
+  descricao       String         @db.Text
+  dataInteracao   DateTime       @map("data_interacao")
+  leadId          Int            @map("lead_id") @db.UnsignedInt
+  oportunidadeId  Int?           @map("oportunidade_id") @db.UnsignedInt
+  usuarioId       Int            @map("usuario_id") @db.UnsignedInt
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+  lead            Lead           @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  oportunidade    Oportunidade?  @relation(fields: [oportunidadeId], references: [id], onDelete: SetNull)
+  usuario         Usuario        @relation(fields: [usuarioId], references: [id])
+
+  @@index([leadId])
+  @@index([oportunidadeId])
+  @@index([usuarioId])
+  @@index([dataInteracao])
+  @@map("interacao")
+}
