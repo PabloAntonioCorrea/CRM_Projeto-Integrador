@@ -178,7 +178,7 @@ function PainelInteracoes({ leadId, oportunidadeId, oportunidades = [], currentU
               required
             />
           </label>
-          <div className="importActions fullLine">
+          <div className="entityFormActions fullLine">
             <button type="submit" className="primaryBtn" disabled={saving}>
               {saving ? 'Salvando...' : 'Salvar interação'}
             </button>

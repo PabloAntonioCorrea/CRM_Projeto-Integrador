@@ -178,7 +178,7 @@ function PainelTarefas({ leadId, oportunidadeId, oportunidades = [], currentUser
 
       {showForm && (
         <form className="interacaoForm formGrid" onSubmit={handleSubmit}>
-          <label className="inputGroup fullLine">
+          <label className="inputGroup">
             <span>Título</span>
             <input name="titulo" value={form.titulo} onChange={handleChange} required />
           </label>
@@ -204,7 +204,7 @@ function PainelTarefas({ leadId, oportunidadeId, oportunidades = [], currentUser
             </select>
           </label>
           {!oportunidadeId && oportunidades.length > 0 && (
-            <label className="inputGroup fullLine">
+            <label className="inputGroup">
               <span>Oportunidade (opcional)</span>
               <select name="oportunidadeId" value={form.oportunidadeId} onChange={handleChange}>
                 <option value="">Nenhuma</option>
@@ -216,11 +216,11 @@ function PainelTarefas({ leadId, oportunidadeId, oportunidades = [], currentUser
               </select>
             </label>
           )}
-          <label className="inputGroup fullLine">
+          <label className={`inputGroup ${oportunidadeId ? '' : 'fullLine'}`}>
             <span>Descrição (opcional)</span>
             <textarea name="descricao" value={form.descricao} onChange={handleChange} rows={3} />
           </label>
-          <div className="importActions fullLine">
+          <div className="entityFormActions fullLine">
             <button type="submit" className="primaryBtn" disabled={saving}>
               {saving ? 'Salvando...' : 'Salvar tarefa'}
             </button>

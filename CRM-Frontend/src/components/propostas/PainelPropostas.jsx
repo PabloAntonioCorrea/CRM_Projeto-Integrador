@@ -115,7 +115,7 @@ function PainelPropostas({ oportunidadeId, currentUser, onPropostasChange }) {
 
       {showForm && (
         <form className="interacaoForm formGrid" onSubmit={handleSubmit}>
-          <label className="inputGroup fullLine">
+          <label className="inputGroup">
             <span>Título</span>
             <input name="titulo" value={form.titulo} onChange={handleChange} required />
           </label>
@@ -149,7 +149,7 @@ function PainelPropostas({ oportunidadeId, currentUser, onPropostasChange }) {
               ))}
             </select>
           </label>
-          <div className="importActions fullLine">
+          <div className="entityFormActions fullLine">
             <button type="submit" className="primaryBtn" disabled={saving}>
               <PenLine size={18} />
               {saving ? 'Salvando...' : 'Salvar proposta'}

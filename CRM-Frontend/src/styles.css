@@ -793,8 +793,18 @@ th {
   font-size: 14px;
 }
 
-.fullLine {
-  margin-top: 18px;
+.formGrid .fullLine {
+  grid-column: 1 / -1;
+}
+
+.entityFormActions {
+  display: flex;
+  justify-content: center;
+  margin-top: 6px;
+}
+
+.entityFormActions .primaryBtn {
+  min-width: 170px;
 }
 
 .formActions {
