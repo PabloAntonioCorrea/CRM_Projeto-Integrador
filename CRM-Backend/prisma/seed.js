@@ -34,7 +34,6 @@ async function main() {
   await prisma.motivoPerda.createMany({
     data: [
       { nome: 'Preço alto' },
-      { nome: 'Comprou concorrente' },
       { nome: 'Sem orçamento' },
       { nome: 'Sem resposta do cliente' },
       { nome: 'Prazo não atendido' },
