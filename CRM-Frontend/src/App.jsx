@@ -15,7 +15,7 @@ import UsuarioForm from './screens/UsuarioForm'
 import Usuarios from './screens/Usuarios'
 import './styles.css'
 
-function AppShell({ currentUser }) {
+function AppShell({ currentUser, onLogout }) {
   const [screen, setScreen] = useState('dashboard')
   const [editingLeadId, setEditingLeadId] = useState(null)
   const [editingOportunidadeId, setEditingOportunidadeId] = useState(null)
@@ -117,7 +117,7 @@ function AppShell({ currentUser }) {
 
   return (
     <div className="app">
-      <Sidebar screen={screen} setScreen={setScreen} />
+      <Sidebar screen={screen} setScreen={setScreen} onLogout={onLogout} />
       <main className="content">{screens[screen] ?? <Dashboard />}</main>
     </div>
   )
@@ -126,7 +126,7 @@ function AppShell({ currentUser }) {
 function App() {
   const [sessionUser, setSessionUser] = useState(null)
   return sessionUser ? (
-    <AppShell currentUser={sessionUser} />
+    <AppShell currentUser={sessionUser} onLogout={() => setSessionUser(null)} />
   ) : (
     <Login onLogin={(usuario) => setSessionUser(usuario)} />
   )

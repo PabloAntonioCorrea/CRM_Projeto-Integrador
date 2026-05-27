@@ -9,7 +9,7 @@ const navItems = [
   ['usuarios', UserCog, 'Usuários'],
 ]
 
-function Sidebar({ screen, setScreen }) {
+function Sidebar({ screen, setScreen, onLogout }) {
   return (
     <aside className="sidebar">
       <div className="brand">
@@ -27,7 +27,7 @@ function Sidebar({ screen, setScreen }) {
           </button>
         ))}
       </nav>
-      <button className="logout">
+      <button type="button" className="logout" onClick={onLogout}>
         <LogOut size={18} />
         Sair
       </button>
