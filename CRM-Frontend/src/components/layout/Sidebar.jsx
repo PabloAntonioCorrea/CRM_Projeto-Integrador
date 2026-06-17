@@ -17,7 +17,7 @@ function Sidebar({ screen, setScreen, onLogout, currentUser }) {
       <div className="brand">
         <div className="brandIcon">C</div>
         <div>
-          <strong>CRM MEJ</strong>
+          <strong>CRM Compact.Jr</strong>
           <span>Gestão Comercial</span>
         </div>
       </div>

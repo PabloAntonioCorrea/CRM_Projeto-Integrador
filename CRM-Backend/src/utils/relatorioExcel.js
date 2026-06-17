@@ -45,7 +45,7 @@ const mergeAndStyleRow = (sheet, rowNumber, fromCol, toCol, value, style) => {
 
 export const buildRelatorioExcelBuffer = async (relatorio) => {
   const workbook = new ExcelJS.Workbook()
-  workbook.creator = 'CRM Integrador'
+  workbook.creator = 'CRM Compact.Jr'
   workbook.created = new Date()
 
   const sheet = workbook.addWorksheet('Relatório', {
@@ -55,7 +55,7 @@ export const buildRelatorioExcelBuffer = async (relatorio) => {
 
   sheet.columns = [{ width: 42 }, { width: 24 }, { width: 24 }]
 
-  mergeAndStyleRow(sheet, 1, 1, 3, 'CRM Integrador — Relatório Comercial', (cell) => {
+  mergeAndStyleRow(sheet, 1, 1, 3, 'CRM Compact.Jr — Relatório Comercial', (cell) => {
     cell.font = { name: Styles.fontName, bold: true, size: 18, color: { argb: Styles.titleFont } }
     cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: Styles.titleFill } }
     cell.alignment = { horizontal: 'center', vertical: 'middle' }

@@ -53,7 +53,21 @@ Isso aplica todas as migrations em `prisma/migrations/` no schema `crm_integrado
 npm run db:seed
 ```
 
-Usuários de teste com senha: `123456`
+Conta inicial de administrador:
+
+| E-mail | Senha |
+|--------|-------|
+| `admin@empresa.com` | `123456` |
+
+O seed também cria as etapas do funil e motivos de perda padrão. Leads, oportunidades e demais dados devem ser cadastrados pelo sistema.
+
+## Zerar o banco e começar do zero
+
+```powershell
+npm run db:reset
+```
+
+Apaga todos os dados, reaplica as migrations e roda o seed mínimo (só admin + configurações do funil).
 
 ## Subir a API
 
@@ -72,7 +86,7 @@ irm http://localhost:3333/usuarios
 Login (seed):
 
 ```powershell
-$body = @{ email = 'pablo@empresa.com'; senha = '123456' } | ConvertTo-Json
+$body = @{ email = 'admin@empresa.com'; senha = '123456' } | ConvertTo-Json
 irm http://localhost:3333/auth/login -Method POST -Body $body -ContentType 'application/json'
 ```
 

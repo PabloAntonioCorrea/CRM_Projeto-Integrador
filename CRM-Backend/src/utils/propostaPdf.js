@@ -4,7 +4,7 @@ import { formatDateBr } from './date.js'
 
 const PdfConfig = {
   margin: 50,
-  brand: 'CRM MEJ',
+  brand: 'CRM Compact.Jr',
   subtitle: 'Gestão Comercial',
   accent: '#1e40af',
 }
@@ -88,7 +88,7 @@ export const buildPropostaPdfBuffer = (proposta) => {
       .fontSize(9)
       .fillColor('#94a3b8')
       .text(
-        'Documento gerado automaticamente pelo CRM MEJ. Este material resume os dados cadastrados da proposta e da oportunidade vinculada.',
+        'Documento gerado automaticamente pelo CRM Compact.Jr. Este material resume os dados cadastrados da proposta e da oportunidade vinculada.',
         { align: 'left' }
       )
     doc.moveDown(0.5)

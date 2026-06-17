@@ -109,7 +109,7 @@ export const buildLeadsImportTemplateBuffer = async () => {
     nicho: 'Tecnologia',
     status: 'Ativo',
     data_cadastro: '2026-01-10',
-    responsavel: 'pablo@empresa.com',
+    responsavel: 'admin@empresa.com',
     observacoes: 'Lead importado de exemplo',
   })
 
