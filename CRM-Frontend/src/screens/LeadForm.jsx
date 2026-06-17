@@ -3,7 +3,7 @@ import { Save, X } from 'lucide-react'
 import Field from '../components/common/Field'
 import Header from '../components/layout/Header'
 import { createLead, fetchLeadById, updateLead } from '../services/leadsService'
-import { fetchUsuarios } from '../services/usuariosService'
+import { fetchUsuariosOpcoes } from '../services/usuariosService'
 
 const EmptyForm = {
   nome: '',
@@ -36,7 +36,7 @@ function LeadForm({ setScreen, leadId }) {
     const loadFormData = async () => {
       setError('')
       try {
-        const usuariosData = await fetchUsuarios()
+        const usuariosData = await fetchUsuariosOpcoes()
         setUsuarios(usuariosData)
         if (!leadId) {
           setForm({

@@ -3,36 +3,79 @@ import { formatCurrencyBr } from '../utils/currency.js'
 
 const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
 
-export const getDashboardStats = async () => {
-  const [totalLeads, leadsAtivos, totalOportunidades, etapaFechado, oportunidadesFechadas, leads] =
-    await Promise.all([
-      prisma.lead.count(),
-      prisma.lead.count({ where: { status: 'Ativo' } }),
-      prisma.oportunidade.count(),
-      prisma.etapaFunil.findFirst({ where: { nome: 'Fechado' } }),
-      prisma.oportunidade.findMany({
-        where: { etapaFunil: { nome: 'Fechado' } },
-        select: { valorEstimado: true },
-      }),
-      prisma.lead.findMany({
-        select: { dataCadastro: true, status: true },
-        orderBy: { dataCadastro: 'desc' },
-      }),
-    ])
+const PeriodosPermitidos = [3, 6, 12]
+
+const parseMeses = (value) => {
+  const parsed = Number(value)
+  if (!value || Number.isNaN(parsed)) return 6
+  return PeriodosPermitidos.includes(parsed) ? parsed : 6
+}
+
+const getPeriodBounds = (meses) => {
+  const now = new Date()
+  const dataInicio = new Date(now.getFullYear(), now.getMonth() - (meses - 1), 1)
+  const dataFim = new Date(now)
+  dataFim.setHours(23, 59, 59, 999)
+  return { dataInicio, dataFim }
+}
+
+export const getDashboardStats = async (query = {}) => {
+  const meses = parseMeses(query.meses)
+  const { dataInicio, dataFim } = getPeriodBounds(meses)
+
+  const leadWhere = {
+    dataCadastro: { gte: dataInicio, lte: dataFim },
+  }
+
+  const oportunidadeWhere = {
+    dataCriacao: { gte: dataInicio, lte: dataFim },
+  }
+
+  const etapaFechado = await prisma.etapaFunil.findFirst({ where: { nome: 'Fechado' } })
+
+  const [
+    totalLeads,
+    leadsAtivos,
+    totalOportunidades,
+    oportunidadesFechadas,
+    leads,
+    oportunidadesAbertas,
+    emNegociacao,
+  ] = await Promise.all([
+    prisma.lead.count({ where: leadWhere }),
+    prisma.lead.count({ where: { ...leadWhere, status: 'Ativo' } }),
+    prisma.oportunidade.count({ where: oportunidadeWhere }),
+    prisma.oportunidade.findMany({
+      where: {
+        ...oportunidadeWhere,
+        etapaFunil: { nome: 'Fechado' },
+      },
+      select: { valorEstimado: true },
+    }),
+    prisma.lead.findMany({
+      where: leadWhere,
+      select: { dataCadastro: true, status: true },
+      orderBy: { dataCadastro: 'desc' },
+    }),
+    etapaFechado
+      ? prisma.oportunidade.count({
+          where: {
+            ...oportunidadeWhere,
+            etapaFunilId: { not: etapaFechado.id },
+          },
+        })
+      : prisma.oportunidade.count({ where: oportunidadeWhere }),
+    prisma.oportunidade.count({
+      where: {
+        ...oportunidadeWhere,
+        etapaFunil: { nome: 'Negociação' },
+      },
+    }),
+  ])
 
   const leadsInativos = totalLeads - leadsAtivos
   const ativosPercentual = totalLeads > 0 ? Math.round((leadsAtivos / totalLeads) * 100) : 0
   const passivosPercentual = totalLeads > 0 ? 100 - ativosPercentual : 0
-
-  const oportunidadesAbertas = etapaFechado
-    ? await prisma.oportunidade.count({
-        where: { etapaFunilId: { not: etapaFechado.id } },
-      })
-    : totalOportunidades
-
-  const emNegociacao = await prisma.oportunidade.count({
-    where: { etapaFunil: { nome: 'Negociação' } },
-  })
 
   const valorVendasFechadas = oportunidadesFechadas.reduce(
     (acc, item) => acc + Number(item.valorEstimado),
@@ -44,9 +87,10 @@ export const getDashboardStats = async () => {
       ? Math.round((oportunidadesFechadas.length / totalOportunidades) * 100)
       : 0
 
-  const leadsPorMes = buildLeadsPorMes(leads)
+  const leadsPorMes = buildLeadsPorMes(leads, meses)
 
   return {
+    meses,
     totalLeads,
     leadsAtivos,
     leadsInativos,
@@ -63,11 +107,11 @@ export const getDashboardStats = async () => {
   }
 }
 
-const buildLeadsPorMes = (leads) => {
+const buildLeadsPorMes = (leads, meses = 6) => {
   const now = new Date()
   const buckets = []
 
-  for (let index = 5; index >= 0; index -= 1) {
+  for (let index = meses - 1; index >= 0; index -= 1) {
     const date = new Date(now.getFullYear(), now.getMonth() - index, 1)
     buckets.push({
       key: `${date.getFullYear()}-${date.getMonth()}`,
@@ -83,11 +127,14 @@ const buildLeadsPorMes = (leads) => {
     if (bucket) bucket.count += 1
   }
 
-  const maxCount = Math.max(...buckets.map((item) => item.count), 1)
+  const maxCount = Math.max(...buckets.map((item) => item.count), 0)
 
   return buckets.map((item) => ({
     label: item.label,
     count: item.count,
-    height: Math.round((item.count / maxCount) * 100) || 8,
+    height:
+      item.count === 0 || maxCount === 0
+        ? 0
+        : Math.max(18, Math.round((item.count / maxCount) * 100)),
   }))
 }

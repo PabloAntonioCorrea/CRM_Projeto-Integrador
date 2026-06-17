@@ -1,10 +1,13 @@
 import { apiRequest } from './apiClient.js'
+import { buildUsuarioFilterQuery } from '../utils/queryParams.js'
 
-export const fetchOportunidades = () => apiRequest('/oportunidades')
+export const fetchOportunidades = (params) =>
+  apiRequest(`/oportunidades${buildUsuarioFilterQuery(params?.usuarioId)}`)
 
 export const fetchOportunidadeById = (id) => apiRequest(`/oportunidades/${id}`)
 
-export const fetchOportunidadesFunil = () => apiRequest('/oportunidades/funil')
+export const fetchOportunidadesFunil = (params) =>
+  apiRequest(`/oportunidades/funil${buildUsuarioFilterQuery(params?.usuarioId)}`)
 
 export const createOportunidade = (payload) =>
   apiRequest('/oportunidades', {

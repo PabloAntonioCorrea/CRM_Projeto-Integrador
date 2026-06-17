@@ -1,9 +1,9 @@
 import * as leadsImportService from '../services/leadsImport.service.js'
 import * as leadsService from '../services/leads.service.js'
 
-export const list = async (_request, response, next) => {
+export const list = async (request, response, next) => {
   try {
-    const leads = await leadsService.listLeads()
+    const leads = await leadsService.listLeads(request.query)
     response.json(leads)
   } catch (error) {
     next(error)

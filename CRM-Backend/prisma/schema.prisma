@@ -80,6 +80,7 @@ model EtapaFunil {
   createdAt     DateTime       @default(now()) @map("created_at")
   updatedAt     DateTime       @updatedAt @map("updated_at")
   oportunidades Oportunidade[]
+  historicoEtapas OportunidadeEtapaHistorico[]
 
   @@map("etapa_funil")
 }
@@ -128,12 +129,29 @@ model Oportunidade {
   interacoes      Interacao[]
   tarefas         Tarefa[]
   propostas       Proposta[]
+  historicoEtapas OportunidadeEtapaHistorico[]
 
   @@index([usuarioId])
   @@index([leadId])
   @@index([etapaFunilId])
   @@index([motivoPerdaId])
   @@map("oportunidade")
+}
+
+model OportunidadeEtapaHistorico {
+  id             Int          @id @default(autoincrement()) @db.UnsignedInt
+  oportunidadeId Int          @map("oportunidade_id") @db.UnsignedInt
+  etapaFunilId   Int          @map("etapa_funil_id") @db.UnsignedInt
+  entradaEm      DateTime     @map("entrada_em")
+  saidaEm        DateTime?    @map("saida_em")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  oportunidade   Oportunidade @relation(fields: [oportunidadeId], references: [id], onDelete: Cascade)
+  etapaFunil     EtapaFunil   @relation(fields: [etapaFunilId], references: [id])
+
+  @@index([oportunidadeId])
+  @@index([etapaFunilId])
+  @@index([entradaEm])
+  @@map("oportunidade_etapa_historico")
 }
 
 model Proposta {

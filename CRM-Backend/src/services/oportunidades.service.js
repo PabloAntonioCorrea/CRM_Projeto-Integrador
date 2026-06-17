@@ -3,6 +3,17 @@ import prisma from '../lib/prisma.js'
 import { parseValorEstimado } from '../utils/currency.js'
 import { mapOportunidadeToResponse, oportunidadeInclude } from '../utils/oportunidadeMapper.js'
 import { parsePrioridade } from '../utils/prioridade.js'
+import { parseUsuarioIdFilter } from '../utils/usuarioFilter.js'
+import {
+  calcularTempoMedioPorEtapa,
+  registrarEntradaEtapa,
+  registrarMudancaEtapa,
+} from './oportunidadeEtapaHistorico.service.js'
+import {
+  buildTarefaResumo,
+  collectOportunidadePendingDates,
+  sortByPendingTasks,
+} from '../utils/tarefaResumo.js'
 
 const parseOportunidadeId = (id) => {
   const parsed = Number(id)
@@ -93,18 +104,46 @@ const buildOportunidadeData = async (body) => {
   return data
 }
 
-export const listOportunidades = async () => {
-  const oportunidades = await prisma.oportunidade.findMany({
-    include: oportunidadeInclude,
-    orderBy: { dataCriacao: 'desc' },
-  })
-  return oportunidades.map(mapOportunidadeToResponse)
+const oportunidadeListInclude = {
+  ...oportunidadeInclude,
+  tarefas: {
+    where: { status: 'Pendente' },
+    select: { dataPrazo: true },
+  },
 }
 
-export const listOportunidadesFunil = async () => {
+export const listOportunidades = async (query = {}) => {
+  const usuarioId = parseUsuarioIdFilter(query)
+  const where = usuarioId ? { usuarioId } : {}
+
+  const oportunidades = await prisma.oportunidade.findMany({
+    where,
+    include: oportunidadeListInclude,
+    orderBy: { dataCriacao: 'desc' },
+  })
+
+  const mapped = oportunidades.map((oportunidade) => {
+    const resumo = buildTarefaResumo(collectOportunidadePendingDates(oportunidade))
+    return {
+      ...mapOportunidadeToResponse(oportunidade),
+      ...resumo,
+      dataCriacaoMs: oportunidade.dataCriacao.getTime(),
+    }
+  })
+
+  return sortByPendingTasks(mapped, (item) => item.dataCriacaoMs).map(
+    ({ prazoMaisProximoMs, dataCriacaoMs, ...item }) => item
+  )
+}
+
+export const listOportunidadesFunil = async (query = {}) => {
+  const usuarioId = parseUsuarioIdFilter(query)
+  const where = usuarioId ? { usuarioId } : {}
+
   const [etapas, oportunidades] = await Promise.all([
     prisma.etapaFunil.findMany({ orderBy: { ordem: 'asc' } }),
     prisma.oportunidade.findMany({
+      where,
       include: oportunidadeInclude,
       orderBy: { dataCriacao: 'desc' },
     }),
@@ -117,7 +156,9 @@ export const listOportunidadesFunil = async () => {
     funil[etapa.nome] = mapped.filter((item) => item.etapaFunilId === etapa.id)
   }
 
-  return funil
+  const tempoMedioPorEtapa = await calcularTempoMedioPorEtapa(query)
+
+  return { funil, tempoMedioPorEtapa }
 }
 
 export const getOportunidadeById = async (idParam) => {
@@ -144,10 +185,16 @@ export const getOportunidadeById = async (idParam) => {
 
 export const createOportunidade = async (body) => {
   const data = await buildOportunidadeData(body)
-  const oportunidade = await prisma.oportunidade.create({
-    data,
-    include: oportunidadeInclude,
+
+  const oportunidade = await prisma.$transaction(async (tx) => {
+    const created = await tx.oportunidade.create({
+      data,
+      include: oportunidadeInclude,
+    })
+    await registrarEntradaEtapa(tx, created.id, created.etapaFunilId, created.dataCriacao)
+    return created
   })
+
   return mapOportunidadeToResponse(oportunidade)
 }
 
@@ -167,11 +214,20 @@ export const updateOportunidade = async (idParam, body) => {
   }
 
   const data = await buildOportunidadeData(body)
-  const oportunidade = await prisma.oportunidade.update({
-    where: { id },
-    data,
-    include: oportunidadeInclude,
+  const etapaAlterada = data.etapaFunilId !== existing.etapaFunilId
+
+  const oportunidade = await prisma.$transaction(async (tx) => {
+    if (etapaAlterada) {
+      await registrarMudancaEtapa(tx, id, data.etapaFunilId)
+    }
+
+    return tx.oportunidade.update({
+      where: { id },
+      data,
+      include: oportunidadeInclude,
+    })
   })
+
   return mapOportunidadeToResponse(oportunidade)
 }
 
@@ -241,6 +297,8 @@ export const marcarOportunidadeComoPerdida = async (idParam, body) => {
   const usuarioId = parseRelationId(body.usuarioId) ?? existing.usuarioId
 
   const oportunidade = await prisma.$transaction(async (tx) => {
+    await registrarMudancaEtapa(tx, id, etapaPerdida.id)
+
     const updated = await tx.oportunidade.update({
       where: { id },
       data: {

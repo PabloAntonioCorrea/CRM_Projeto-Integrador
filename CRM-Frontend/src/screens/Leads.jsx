@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AlertTriangle, CheckCircle2, Download, Edit, Eye, Plus, Search, Trash2, Upload } from 'lucide-react'
 import Header from '../components/layout/Header'
+import FiltroResponsavel from '../components/filtros/FiltroResponsavel'
+import TarefaPendenteTag from '../components/tarefas/TarefaPendenteTag'
 import {
   deleteLead,
   downloadLeadsImportTemplate,
@@ -17,6 +19,7 @@ const ImportRules = {
 function Leads({ setScreen, onEditLead, onNewLead, onViewLead }) {
   const [leads, setLeads] = useState([])
   const [search, setSearch] = useState('')
+  const [responsavelFilter, setResponsavelFilter] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [isImportOpen, setIsImportOpen] = useState(false)
@@ -31,14 +34,14 @@ function Leads({ setScreen, onEditLead, onNewLead, onViewLead }) {
     setLoading(true)
     setError('')
     try {
-      const data = await fetchLeads()
+      const data = await fetchLeads({ usuarioId: responsavelFilter || undefined })
       setLeads(data)
     } catch (requestError) {
       setError(requestError.message)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [responsavelFilter])
 
   useEffect(() => {
     loadLeads()
@@ -111,6 +114,7 @@ function Leads({ setScreen, onEditLead, onNewLead, onViewLead }) {
             onChange={(event) => setSearch(event.target.value)}
           />
         </div>
+        <FiltroResponsavel value={responsavelFilter} onChange={setResponsavelFilter} />
         <button onClick={() => setIsImportOpen((value) => !value)} className="secondaryBtn">
           <Upload size={18} />
           Importar planilha
@@ -247,7 +251,15 @@ function Leads({ setScreen, onEditLead, onNewLead, onViewLead }) {
               ) : (
                 filteredLeads.map((lead) => (
                   <tr key={lead.id}>
-                    <td>{lead.nome}</td>
+                    <td>
+                      <div className="tableTitleCell">
+                        <span>{lead.nome}</span>
+                        <TarefaPendenteTag
+                          count={lead.tarefasPendentes}
+                          prazoMaisProximo={lead.prazoMaisProximo}
+                        />
+                      </div>
+                    </td>
                     <td>{lead.empresa}</td>
                     <td>{lead.responsavel}</td>
                     <td>{lead.cidade}</td>

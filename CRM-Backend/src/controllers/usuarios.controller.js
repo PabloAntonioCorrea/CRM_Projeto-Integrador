@@ -1,5 +1,14 @@
 import * as usuariosService from '../services/usuarios.service.js'
 
+export const listOpcoes = async (_request, response, next) => {
+  try {
+    const usuarios = await usuariosService.listUsuariosOpcoes()
+    response.json(usuarios)
+  } catch (error) {
+    next(error)
+  }
+}
+
 export const list = async (_request, response, next) => {
   try {
     const usuarios = await usuariosService.listUsuarios()

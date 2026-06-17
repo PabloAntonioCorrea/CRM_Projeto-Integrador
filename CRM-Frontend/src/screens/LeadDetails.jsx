@@ -175,11 +175,7 @@ function LeadDetails({ setScreen, leadId, onViewOportunidade, onEditLead, curren
           )}
 
           {activeTab === 'tarefas' && (
-            <PainelTarefas
-              leadId={lead.id}
-              oportunidades={lead.oportunidades ?? []}
-              currentUser={currentUser}
-            />
+            <PainelTarefas leadId={lead.id} currentUser={currentUser} />
           )}
 
           {activeTab === 'contact' && (

@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react'
 import { Save, X } from 'lucide-react'
 import Field from '../components/common/Field'
 import Header from '../components/layout/Header'
+import ModalMudancaEtapaFunil from '../components/oportunidades/ModalMudancaEtapaFunil'
+import { useSession } from '../context/SessionContext'
+import { createInteracaoForOportunidade } from '../services/interacoesService'
 import { fetchEtapasFunil } from '../services/etapasService'
 import { fetchLeads } from '../services/leadsService'
 import {
@@ -9,7 +12,7 @@ import {
   fetchOportunidadeById,
   updateOportunidade,
 } from '../services/oportunidadesService'
-import { fetchUsuarios } from '../services/usuariosService'
+import { fetchUsuariosOpcoes } from '../services/usuariosService'
 import { formatValorFromAmount, maskValorInput, parseValorInputToAmount } from '../utils/currencyInput'
 
 const EmptyForm = {
@@ -22,10 +25,14 @@ const EmptyForm = {
 }
 
 function OportunidadeForm({ setScreen, oportunidadeId }) {
+  const currentUser = useSession()
   const [form, setForm] = useState(EmptyForm)
   const [leads, setLeads] = useState([])
   const [usuarios, setUsuarios] = useState([])
   const [etapas, setEtapas] = useState([])
+  const [etapaOriginalId, setEtapaOriginalId] = useState('')
+  const [mudancaEtapaModal, setMudancaEtapaModal] = useState(null)
+  const [pendingPayload, setPendingPayload] = useState(null)
   const [loading, setLoading] = useState(Boolean(oportunidadeId))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -37,7 +44,7 @@ function OportunidadeForm({ setScreen, oportunidadeId }) {
       try {
         const [leadsData, usuariosData, etapasData] = await Promise.all([
           fetchLeads(),
-          fetchUsuarios(),
+          fetchUsuariosOpcoes(),
           fetchEtapasFunil(),
         ])
         setLeads(leadsData)
@@ -51,13 +58,15 @@ function OportunidadeForm({ setScreen, oportunidadeId }) {
         }
 
         const oportunidade = await fetchOportunidadeById(oportunidadeId)
+        const etapaId = String(oportunidade.etapaFunilId ?? '')
+        setEtapaOriginalId(etapaId)
         setForm({
           leadId: String(oportunidade.leadId ?? ''),
           titulo: oportunidade.titulo ?? '',
           usuarioId: String(oportunidade.usuarioId ?? ''),
           valorEstimado: formatValorFromAmount(oportunidade.valorEstimado),
           prioridade: oportunidade.prioridade ?? 'Média',
-          etapaFunilId: String(oportunidade.etapaFunilId ?? ''),
+          etapaFunilId: etapaId,
         })
       } catch (requestError) {
         setError(requestError.message)
@@ -78,30 +87,76 @@ function OportunidadeForm({ setScreen, oportunidadeId }) {
     setForm((current) => ({ ...current, valorEstimado: masked }))
   }
 
+  const getEtapaNome = (etapaId) =>
+    etapas.find((etapa) => String(etapa.id) === String(etapaId))?.nome ?? ''
+
+  const salvarOportunidade = async (payload) => {
+    if (isEditing) {
+      await updateOportunidade(oportunidadeId, payload)
+    } else {
+      await createOportunidade(payload)
+    }
+    setScreen('oportunidade')
+  }
+
   const handleSubmit = async (event) => {
     event.preventDefault()
-    setSaving(true)
     setError('')
+
+    const payload = {
+      leadId: Number(form.leadId),
+      titulo: form.titulo,
+      usuarioId: Number(form.usuarioId),
+      etapaFunilId: Number(form.etapaFunilId),
+      prioridade: form.prioridade,
+      valorEstimado: parseValorInputToAmount(form.valorEstimado),
+    }
+
+    const etapaAlterada = isEditing && form.etapaFunilId !== etapaOriginalId
+
+    if (etapaAlterada) {
+      setPendingPayload(payload)
+      setMudancaEtapaModal({
+        etapaOrigem: getEtapaNome(etapaOriginalId),
+        etapaDestino: getEtapaNome(form.etapaFunilId),
+      })
+      return
+    }
+
+    setSaving(true)
     try {
-      const payload = {
-        leadId: Number(form.leadId),
-        titulo: form.titulo,
-        usuarioId: Number(form.usuarioId),
-        etapaFunilId: Number(form.etapaFunilId),
-        prioridade: form.prioridade,
-        valorEstimado: parseValorInputToAmount(form.valorEstimado),
-      }
-      if (isEditing) {
-        await updateOportunidade(oportunidadeId, payload)
-      } else {
-        await createOportunidade(payload)
-      }
-      setScreen('oportunidade')
+      await salvarOportunidade(payload)
     } catch (requestError) {
       setError(requestError.message)
     } finally {
       setSaving(false)
     }
+  }
+
+  const handleMudancaEtapaConfirm = async (interacao) => {
+    if (!pendingPayload) return
+    setSaving(true)
+    setError('')
+    try {
+      await updateOportunidade(oportunidadeId, pendingPayload)
+      await createInteracaoForOportunidade(oportunidadeId, {
+        ...interacao,
+        usuarioId: currentUser?.id,
+      })
+      setMudancaEtapaModal(null)
+      setPendingPayload(null)
+      setScreen('oportunidade')
+    } catch (requestError) {
+      setError(requestError.message)
+      throw requestError
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleMudancaEtapaClose = () => {
+    setMudancaEtapaModal(null)
+    setPendingPayload(null)
   }
 
   if (loading) {
@@ -200,6 +255,15 @@ function OportunidadeForm({ setScreen, oportunidadeId }) {
           </div>
         </form>
       </section>
+      {mudancaEtapaModal && (
+        <ModalMudancaEtapaFunil
+          tituloOportunidade={form.titulo}
+          etapaOrigem={mudancaEtapaModal.etapaOrigem}
+          etapaDestino={mudancaEtapaModal.etapaDestino}
+          onClose={handleMudancaEtapaClose}
+          onConfirm={handleMudancaEtapaConfirm}
+        />
+      )}
     </>
   )
 }

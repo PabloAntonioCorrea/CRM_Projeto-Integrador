@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { AlertTriangle, CheckCircle2, Download, Filter } from 'lucide-react'
 import Header from '../components/layout/Header'
 import { downloadRelatorioExcel, fetchRelatorio } from '../services/relatoriosService'
-import { fetchUsuarios } from '../services/usuariosService'
+import { fetchUsuariosOpcoes } from '../services/usuariosService'
 
 const getDefaultPeriod = () => {
   const dataFim = new Date()
@@ -28,7 +28,7 @@ function Relatorios() {
   useEffect(() => {
     const loadUsuarios = async () => {
       try {
-        const data = await fetchUsuarios()
+        const data = await fetchUsuariosOpcoes()
         setUsuarios(data)
       } catch {
         setUsuarios([])

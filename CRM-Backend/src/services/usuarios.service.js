@@ -68,6 +68,13 @@ export const listUsuarios = async () => {
   return usuarios.map(mapUsuarioToResponse)
 }
 
+export const listUsuariosOpcoes = async () => {
+  return prisma.usuario.findMany({
+    select: { id: true, nome: true },
+    orderBy: { nome: 'asc' },
+  })
+}
+
 export const getUsuarioById = async (idParam) => {
   const id = parseUsuarioId(idParam)
   if (!id) {

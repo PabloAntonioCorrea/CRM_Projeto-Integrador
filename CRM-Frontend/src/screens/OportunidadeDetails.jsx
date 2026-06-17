@@ -12,7 +12,7 @@ import ModalMarcarPerdida from '../components/oportunidades/ModalMarcarPerdida'
 
 import Header from '../components/layout/Header'
 
-import { fetchPropostasByOportunidade } from '../services/propostasService'
+import { fetchPropostasByOportunidade, downloadPropostaPdf } from '../services/propostasService'
 import { fetchOportunidadeById } from '../services/oportunidadesService'
 
 import { getPriorityClass } from '../utils/priorityClass'
@@ -32,6 +32,8 @@ function OportunidadeDetails({ setScreen, oportunidadeId, currentUser }) {
   const [error, setError] = useState('')
 
   const [showPerdaModal, setShowPerdaModal] = useState(false)
+  const [downloadingPdf, setDownloadingPdf] = useState(false)
+  const [documentError, setDocumentError] = useState('')
 
 
 
@@ -83,6 +85,19 @@ function OportunidadeDetails({ setScreen, oportunidadeId, currentUser }) {
 
 
   const propostaRecente = propostas[0] ?? null
+
+  const handleDownloadPdf = async () => {
+    if (!propostaRecente) return
+    setDownloadingPdf(true)
+    setDocumentError('')
+    try {
+      await downloadPropostaPdf(propostaRecente.id)
+    } catch (requestError) {
+      setDocumentError(requestError.message)
+    } finally {
+      setDownloadingPdf(false)
+    }
+  }
 
 
 
@@ -328,15 +343,17 @@ function OportunidadeDetails({ setScreen, oportunidadeId, currentUser }) {
 
                     </div>
 
-                    <button type="button" className="secondaryBtn" disabled>
-
+                    <button
+                      type="button"
+                      className="secondaryBtn"
+                      onClick={handleDownloadPdf}
+                      disabled={downloadingPdf}
+                    >
                       <Download size={18} />
-
-                      Baixar PDF (em breve)
-
+                      {downloadingPdf ? 'Gerando PDF...' : 'Baixar PDF'}
                     </button>
-
                   </div>
+                  {documentError && <p className="formError">{documentError}</p>}
 
                   <div className="documentPreviewBody">
 

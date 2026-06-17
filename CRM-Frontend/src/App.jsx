@@ -1,5 +1,6 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
+import { SessionProvider } from './context/SessionContext'
 import Sidebar from './components/layout/Sidebar'
 import Dashboard from './screens/Dashboard'
 import Funil from './screens/Funil'
@@ -13,6 +14,8 @@ import Oportunidades from './screens/Oportunidades'
 import Relatorios from './screens/Relatorios'
 import UsuarioForm from './screens/UsuarioForm'
 import Usuarios from './screens/Usuarios'
+import { clearSessionUser, loadSessionUser, saveSessionUser } from './utils/authSession'
+import { adminOnlyScreens, isAdministrador } from './utils/userAccess'
 import './styles.css'
 
 function AppShell({ currentUser, onLogout }) {
@@ -61,6 +64,12 @@ function AppShell({ currentUser, onLogout }) {
     setEditingUsuarioId(usuarioId)
     setScreen('usuarioForm')
   }
+
+  useEffect(() => {
+    if (!isAdministrador(currentUser) && adminOnlyScreens.includes(screen)) {
+      setScreen('dashboard')
+    }
+  }, [screen, currentUser])
 
   const screens = {
     dashboard: <Dashboard />,
@@ -116,19 +125,32 @@ function AppShell({ currentUser, onLogout }) {
   }
 
   return (
-    <div className="app">
-      <Sidebar screen={screen} setScreen={setScreen} onLogout={onLogout} />
-      <main className="content">{screens[screen] ?? <Dashboard />}</main>
-    </div>
+    <SessionProvider user={currentUser}>
+      <div className="app">
+        <Sidebar screen={screen} setScreen={setScreen} onLogout={onLogout} currentUser={currentUser} />
+        <main className="content">{screens[screen] ?? <Dashboard />}</main>
+      </div>
+    </SessionProvider>
   )
 }
 
 function App() {
-  const [sessionUser, setSessionUser] = useState(null)
+  const [sessionUser, setSessionUser] = useState(() => loadSessionUser())
+
+  const handleLogin = (usuario) => {
+    saveSessionUser(usuario)
+    setSessionUser(usuario)
+  }
+
+  const handleLogout = () => {
+    clearSessionUser()
+    setSessionUser(null)
+  }
+
   return sessionUser ? (
-    <AppShell currentUser={sessionUser} onLogout={() => setSessionUser(null)} />
+    <AppShell currentUser={sessionUser} onLogout={handleLogout} />
   ) : (
-    <Login onLogin={(usuario) => setSessionUser(usuario)} />
+    <Login onLogin={handleLogin} />
   )
 }
 

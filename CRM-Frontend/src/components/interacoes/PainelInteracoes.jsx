@@ -6,7 +6,7 @@ import {
   fetchInteracoesByLead,
   fetchInteracoesByOportunidade,
 } from '../../services/interacoesService'
-import { fetchUsuarios } from '../../services/usuariosService'
+import { fetchUsuariosOpcoes } from '../../services/usuariosService'
 
 const InteracaoTipos = [
   { value: 'Ligacao', label: 'Ligação' },
@@ -62,7 +62,7 @@ function PainelInteracoes({ leadId, oportunidadeId, oportunidades = [], currentU
   useEffect(() => {
     const loadUsuarios = async () => {
       try {
-        const data = await fetchUsuarios()
+        const data = await fetchUsuariosOpcoes()
         setUsuarios(data)
       } catch {
         setUsuarios([])

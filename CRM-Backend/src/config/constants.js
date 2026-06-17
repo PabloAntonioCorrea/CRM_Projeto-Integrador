@@ -76,4 +76,5 @@ export const ErrorMessages = {
   propostaStatusInvalid: 'Status da proposta inválido',
   propostaDataRequired: 'Data da proposta é obrigatória',
   propostaDataInvalid: 'Data da proposta inválida',
+  accessDenied: 'Acesso negado',
 }

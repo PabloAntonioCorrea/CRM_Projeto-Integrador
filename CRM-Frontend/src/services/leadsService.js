@@ -1,7 +1,8 @@
 import { ApiConfig } from '../config/api.js'
 import { apiRequest } from './apiClient.js'
+import { buildUsuarioFilterQuery } from '../utils/queryParams.js'
 
-export const fetchLeads = () => apiRequest('/leads')
+export const fetchLeads = (params) => apiRequest(`/leads${buildUsuarioFilterQuery(params?.usuarioId)}`)
 
 export const fetchLeadById = (id) => apiRequest(`/leads/${id}`)
 

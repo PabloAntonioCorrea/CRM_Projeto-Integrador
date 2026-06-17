@@ -6,7 +6,9 @@ import {
   PropostaStatusValidos,
   mapPropostaToResponse,
   propostaInclude,
+  propostaPdfInclude,
 } from '../utils/propostaMapper.js'
+import { buildPropostaPdfBuffer, buildPropostaPdfFilename } from '../utils/propostaPdf.js'
 
 const parseId = (value) => {
   const parsed = Number(value)
@@ -178,4 +180,29 @@ export const deleteProposta = async (idParam) => {
   }
 
   await prisma.proposta.delete({ where: { id } })
+}
+
+export const exportPropostaPdf = async (idParam) => {
+  const id = parseId(idParam)
+  if (!id) {
+    const error = new Error(ErrorMessages.invalidPropostaId)
+    error.statusCode = 400
+    throw error
+  }
+
+  const proposta = await prisma.proposta.findUnique({
+    where: { id },
+    include: propostaPdfInclude,
+  })
+
+  if (!proposta) {
+    const error = new Error(ErrorMessages.propostaNotFound)
+    error.statusCode = 404
+    throw error
+  }
+
+  const buffer = await buildPropostaPdfBuffer(proposta)
+  const filename = buildPropostaPdfFilename(proposta)
+
+  return { buffer, filename }
 }

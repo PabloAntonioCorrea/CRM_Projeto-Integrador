@@ -1,12 +1,18 @@
 import { ErrorMessages } from '../config/constants.js'
 import prisma from '../lib/prisma.js'
 import { parseDateInput } from '../utils/date.js'
+import { parseUsuarioIdFilter } from '../utils/usuarioFilter.js'
 import {
   leadIncludeDetail,
   leadIncludeUsuario,
   mapLeadDetailToResponse,
   mapLeadToResponse,
 } from '../utils/leadMapper.js'
+import {
+  buildTarefaResumo,
+  collectLeadPendingDates,
+  sortByPendingTasks,
+} from '../utils/tarefaResumo.js'
 
 const parseLeadId = (id) => {
   const parsed = Number(id)
@@ -67,12 +73,36 @@ const buildLeadData = async (body) => {
   }
 }
 
-export const listLeads = async () => {
+const leadListInclude = {
+  ...leadIncludeUsuario,
+  tarefas: {
+    where: { status: 'Pendente', oportunidadeId: null },
+    select: { dataPrazo: true },
+  },
+}
+
+export const listLeads = async (query = {}) => {
+  const usuarioId = parseUsuarioIdFilter(query)
+  const where = usuarioId ? { usuarioId } : {}
+
   const leads = await prisma.lead.findMany({
-    include: leadIncludeUsuario,
+    where,
+    include: leadListInclude,
     orderBy: { dataCadastro: 'desc' },
   })
-  return leads.map(mapLeadToResponse)
+
+  const mapped = leads.map((lead) => {
+    const resumo = buildTarefaResumo(collectLeadPendingDates(lead))
+    return {
+      ...mapLeadToResponse(lead),
+      ...resumo,
+      dataCadastroMs: lead.dataCadastro.getTime(),
+    }
+  })
+
+  return sortByPendingTasks(mapped, (item) => item.dataCadastroMs).map(
+    ({ prazoMaisProximoMs, dataCadastroMs, ...item }) => item
+  )
 }
 
 export const getLeadById = async (idParam) => {

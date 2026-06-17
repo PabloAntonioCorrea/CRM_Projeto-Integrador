@@ -26,8 +26,12 @@ function FunilColuna({
         <span>{oportunidades.length}</span>
       </div>
       {showTempoMedio ? (
-        <div className={`stageTimeTag ${diasMedios >= 7 ? 'high' : diasMedios >= 5 ? 'medium' : 'low'}`}>
-          {diasMedios} dias médios
+        <div
+          className={`stageTimeTag ${
+            diasMedios === null ? 'low' : diasMedios >= 7 ? 'high' : diasMedios >= 5 ? 'medium' : 'low'
+          }`}
+        >
+          {diasMedios === null ? 'Sem dados' : `${diasMedios} dias médios`}
         </div>
       ) : (
         <div className="stageTimeTag low">{isPerdida ? 'Encerradas' : 'Ganhas'}</div>

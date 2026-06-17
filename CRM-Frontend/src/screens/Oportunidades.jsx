@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Edit, Eye, Plus, Search, Trash2 } from 'lucide-react'
 import Header from '../components/layout/Header'
+import FiltroResponsavel from '../components/filtros/FiltroResponsavel'
+import TarefaPendenteTag from '../components/tarefas/TarefaPendenteTag'
 import { deleteOportunidade, fetchOportunidades } from '../services/oportunidadesService'
 import { getPriorityClass } from '../utils/priorityClass'
 
@@ -8,6 +10,7 @@ function Oportunidades({ setScreen, onNewOportunidade, onEditOportunidade, onVie
   const [oportunidades, setOportunidades] = useState([])
   const [search, setSearch] = useState('')
   const [etapaFilter, setEtapaFilter] = useState('')
+  const [responsavelFilter, setResponsavelFilter] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -15,14 +18,14 @@ function Oportunidades({ setScreen, onNewOportunidade, onEditOportunidade, onVie
     setLoading(true)
     setError('')
     try {
-      const data = await fetchOportunidades()
+      const data = await fetchOportunidades({ usuarioId: responsavelFilter || undefined })
       setOportunidades(data)
     } catch (requestError) {
       setError(requestError.message)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [responsavelFilter])
 
   useEffect(() => {
     loadOportunidades()
@@ -68,6 +71,7 @@ function Oportunidades({ setScreen, onNewOportunidade, onEditOportunidade, onVie
             onChange={(event) => setSearch(event.target.value)}
           />
         </div>
+        <FiltroResponsavel value={responsavelFilter} onChange={setResponsavelFilter} />
         <select value={etapaFilter} onChange={(event) => setEtapaFilter(event.target.value)}>
           <option value="">Todas as etapas</option>
           {etapas.map((etapa) => (
@@ -108,7 +112,15 @@ function Oportunidades({ setScreen, onNewOportunidade, onEditOportunidade, onVie
               ) : (
                 filteredOportunidades.map((oportunidade) => (
                   <tr key={oportunidade.id}>
-                    <td>{oportunidade.titulo}</td>
+                    <td>
+                      <div className="tableTitleCell">
+                        <span>{oportunidade.titulo}</span>
+                        <TarefaPendenteTag
+                          count={oportunidade.tarefasPendentes}
+                          prazoMaisProximo={oportunidade.prazoMaisProximo}
+                        />
+                      </div>
+                    </td>
                     <td>{oportunidade.lead}</td>
                     <td>{oportunidade.responsavel}</td>
                     <td>

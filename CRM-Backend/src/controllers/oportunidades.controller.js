@@ -1,17 +1,17 @@
 import * as oportunidadesService from '../services/oportunidades.service.js'
 
-export const list = async (_request, response, next) => {
+export const list = async (request, response, next) => {
   try {
-    const oportunidades = await oportunidadesService.listOportunidades()
+    const oportunidades = await oportunidadesService.listOportunidades(request.query)
     response.json(oportunidades)
   } catch (error) {
     next(error)
   }
 }
 
-export const listFunil = async (_request, response, next) => {
+export const listFunil = async (request, response, next) => {
   try {
-    const funil = await oportunidadesService.listOportunidadesFunil()
+    const funil = await oportunidadesService.listOportunidadesFunil(request.query)
     response.json(funil)
   } catch (error) {
     next(error)

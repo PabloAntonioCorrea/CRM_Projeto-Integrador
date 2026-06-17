@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
-import { PenLine, Plus, Trash2 } from 'lucide-react'
+import { Download, Edit, PenLine, Plus, Trash2, X } from 'lucide-react'
 import {
   createProposta,
   deleteProposta,
+  downloadPropostaPdf,
   fetchPropostasByOportunidade,
+  updateProposta,
 } from '../../services/propostasService'
-import { maskValorInput, parseValorInputToAmount } from '../../utils/currencyInput'
+import { fetchUsuariosOpcoes } from '../../services/usuariosService'
+import { formatValorFromAmount, maskValorInput, parseValorInputToAmount } from '../../utils/currencyInput'
 
 const PropostaStatusOptions = [
   { value: 'Rascunho', label: 'Rascunho' },
@@ -30,12 +33,30 @@ const getStatusTagClass = (statusDb) => {
   return 'tag'
 }
 
+const brDateToInput = (brDate) => {
+  if (!brDate) return ''
+  const [day, month, year] = brDate.split('/')
+  if (!day || !month || !year) return ''
+  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
+}
+
+const buildFormFromProposta = (proposta, currentUser) => ({
+  titulo: proposta.titulo ?? '',
+  valor: formatValorFromAmount(proposta.valorNumerico),
+  status: proposta.statusDb ?? 'Rascunho',
+  dataProposta: brDateToInput(proposta.dataProposta) || new Date().toISOString().slice(0, 10),
+  usuarioId: String(proposta.usuarioId ?? currentUser?.id ?? ''),
+})
+
 function PainelPropostas({ oportunidadeId, currentUser, onPropostasChange }) {
   const [propostas, setPropostas] = useState([])
+  const [usuarios, setUsuarios] = useState([])
   const [form, setForm] = useState(buildEmptyForm(currentUser))
+  const [editingId, setEditingId] = useState(null)
   const [showForm, setShowForm] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [downloadingId, setDownloadingId] = useState(null)
   const [error, setError] = useState('')
 
   const loadPropostas = useCallback(async () => {
@@ -58,8 +79,44 @@ function PainelPropostas({ oportunidadeId, currentUser, onPropostasChange }) {
   }, [loadPropostas])
 
   useEffect(() => {
+    const loadUsuarios = async () => {
+      try {
+        const data = await fetchUsuariosOpcoes()
+        setUsuarios(data)
+      } catch {
+        setUsuarios([])
+      }
+    }
+    loadUsuarios()
+  }, [])
+
+  useEffect(() => {
+    if (!editingId) {
+      setForm(buildEmptyForm(currentUser))
+    }
+  }, [currentUser, editingId])
+
+  const resetForm = () => {
     setForm(buildEmptyForm(currentUser))
-  }, [currentUser])
+    setEditingId(null)
+    setShowForm(false)
+  }
+
+  const openNewForm = () => {
+    if (showForm && !editingId) {
+      resetForm()
+      return
+    }
+    setEditingId(null)
+    setForm(buildEmptyForm(currentUser))
+    setShowForm(true)
+  }
+
+  const openEditForm = (proposta) => {
+    setEditingId(proposta.id)
+    setForm(buildFormFromProposta(proposta, currentUser))
+    setShowForm(true)
+  }
 
   const handleChange = (event) => {
     const { name, value } = event.target
@@ -75,15 +132,19 @@ function PainelPropostas({ oportunidadeId, currentUser, onPropostasChange }) {
     setSaving(true)
     setError('')
     try {
-      await createProposta(oportunidadeId, {
+      const payload = {
         titulo: form.titulo,
         valor: parseValorInputToAmount(form.valor),
         status: form.status,
         dataProposta: form.dataProposta,
         usuarioId: Number(form.usuarioId),
-      })
-      setForm(buildEmptyForm(currentUser))
-      setShowForm(false)
+      }
+      if (editingId) {
+        await updateProposta(editingId, payload)
+      } else {
+        await createProposta(oportunidadeId, payload)
+      }
+      resetForm()
       await loadPropostas()
     } catch (requestError) {
       setError(requestError.message)
@@ -104,12 +165,25 @@ function PainelPropostas({ oportunidadeId, currentUser, onPropostasChange }) {
     }
   }
 
+  const handleDownloadPdf = async (proposta) => {
+    if (downloadingId) return
+    setDownloadingId(proposta.id)
+    setError('')
+    try {
+      await downloadPropostaPdf(proposta.id)
+    } catch (requestError) {
+      setError(requestError.message)
+    } finally {
+      setDownloadingId(null)
+    }
+  }
+
   return (
     <div className="leadTabContent">
       <div className="leadActionBar">
-        <button type="button" className="primaryBtn" onClick={() => setShowForm((value) => !value)}>
+        <button type="button" className="primaryBtn" onClick={openNewForm}>
           <Plus size={18} />
-          {showForm ? 'Fechar formulário' : 'Nova proposta'}
+          {showForm && !editingId ? 'Fechar formulário' : 'Nova proposta'}
         </button>
       </div>
 
@@ -149,10 +223,25 @@ function PainelPropostas({ oportunidadeId, currentUser, onPropostasChange }) {
               ))}
             </select>
           </label>
+          <label className="inputGroup">
+            <span>Responsável</span>
+            <select name="usuarioId" value={form.usuarioId} onChange={handleChange} required>
+              <option value="">Selecione</option>
+              {usuarios.map((usuario) => (
+                <option key={usuario.id} value={usuario.id}>
+                  {usuario.nome}
+                </option>
+              ))}
+            </select>
+          </label>
           <div className="entityFormActions fullLine">
+            <button type="button" className="secondaryBtn" onClick={resetForm}>
+              <X size={18} />
+              Cancelar
+            </button>
             <button type="submit" className="primaryBtn" disabled={saving}>
               <PenLine size={18} />
-              {saving ? 'Salvando...' : 'Salvar proposta'}
+              {saving ? 'Salvando...' : editingId ? 'Atualizar proposta' : 'Salvar proposta'}
             </button>
           </div>
         </form>
@@ -186,6 +275,8 @@ function PainelPropostas({ oportunidadeId, currentUser, onPropostasChange }) {
                     <span className={getStatusTagClass(proposta.statusDb)}>{proposta.status}</span>
                   </td>
                   <td className="actions">
+                    <Download size={16} onClick={() => handleDownloadPdf(proposta)} />
+                    <Edit size={16} onClick={() => openEditForm(proposta)} />
                     <Trash2 size={16} onClick={() => handleDelete(proposta)} />
                   </td>
                 </tr>

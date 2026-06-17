@@ -10,28 +10,20 @@ import {
 } from '@dnd-kit/core'
 import { Plus } from 'lucide-react'
 import Header from '../components/layout/Header'
+import FiltroResponsavel from '../components/filtros/FiltroResponsavel'
 import FunilColuna from '../components/funil/FunilColuna'
 import ModalMarcarPerdida from '../components/oportunidades/ModalMarcarPerdida'
+import ModalMudancaEtapaFunil from '../components/oportunidades/ModalMudancaEtapaFunil'
 import { fetchEtapasFunil } from '../services/etapasService'
 import { fetchOportunidadesFunil, updateOportunidade } from '../services/oportunidadesService'
+import { createInteracaoForOportunidade } from '../services/interacoesService'
 import {
   ETAPA_PERDIDA,
   buildUpdatePayload,
   findEtapaOrigem,
-  moveOportunidadeNoFunil,
   resolveEtapaDestino,
 } from '../utils/funilDrag'
 import { getPriorityClass } from '../utils/priorityClass'
-
-const stageAverageDays = {
-  Prospecção: 3,
-  Qualificação: 5,
-  Diagnóstico: 4,
-  Proposta: 7,
-  Negociação: 6,
-  Fechado: 2,
-  Perdida: 0,
-}
 
 const etapasSemTempoMedio = new Set(['Fechado', 'Perdida'])
 
@@ -53,34 +45,37 @@ function FunilOverlayCard({ oportunidade }) {
 
 function Funil({ onNewOportunidade, onViewOportunidade, onEditOportunidade, currentUser }) {
   const [funil, setFunil] = useState({})
+  const [tempoMedioPorEtapa, setTempoMedioPorEtapa] = useState({})
   const [etapas, setEtapas] = useState([])
+  const [responsavelFilter, setResponsavelFilter] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [activeCard, setActiveCard] = useState(null)
-  const [moving, setMoving] = useState(false)
   const [perdidaModal, setPerdidaModal] = useState(null)
+  const [mudancaEtapaModal, setMudancaEtapaModal] = useState(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor)
   )
 
-  const loadFunil = useCallback(async () => {
-    setLoading(true)
+  const loadFunil = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true)
     setError('')
     try {
-      const [funilData, etapasData] = await Promise.all([
-        fetchOportunidadesFunil(),
+      const [funilResponse, etapasData] = await Promise.all([
+        fetchOportunidadesFunil({ usuarioId: responsavelFilter || undefined }),
         fetchEtapasFunil(),
       ])
-      setFunil(funilData)
+      setFunil(funilResponse.funil ?? funilResponse)
+      setTempoMedioPorEtapa(funilResponse.tempoMedioPorEtapa ?? {})
       setEtapas(etapasData)
     } catch (requestError) {
       setError(requestError.message)
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
-  }, [])
+  }, [responsavelFilter])
 
   useEffect(() => {
     loadFunil()
@@ -104,10 +99,10 @@ function Funil({ onNewOportunidade, onViewOportunidade, onEditOportunidade, curr
     return Math.max(
       ...etapasAtivas
         .filter((etapa) => !etapasSemTempoMedio.has(etapa))
-        .map((etapa) => stageAverageDays[etapa] ?? 0),
+        .map((etapa) => tempoMedioPorEtapa[etapa] ?? 0),
       0
     )
-  }, [etapasAtivas])
+  }, [etapasAtivas, tempoMedioPorEtapa])
 
   const findOportunidade = useCallback(
     (oportunidadeId) => {
@@ -128,32 +123,20 @@ function Funil({ onNewOportunidade, onViewOportunidade, onEditOportunidade, curr
         return
       }
 
-      const snapshot = funil
-      setFunil((current) => moveOportunidadeNoFunil(current, oportunidade.id, etapaOrigem, etapaDestino))
-      setMoving(true)
-      setError('')
-
-      try {
-        const atualizada = await updateOportunidade(
-          oportunidade.id,
-          buildUpdatePayload(oportunidade, etapaFunilId)
-        )
-        setFunil((current) => {
-          const next = moveOportunidadeNoFunil(current, oportunidade.id, etapaOrigem, etapaDestino)
-          const lista = [...(next[etapaDestino] ?? [])]
-          const idx = lista.findIndex((item) => String(item.id) === String(oportunidade.id))
-          if (idx >= 0) lista[idx] = { ...lista[idx], ...atualizada, etapa: etapaDestino }
-          return { ...next, [etapaDestino]: lista }
-        })
-      } catch (requestError) {
-        setFunil(snapshot)
-        setError(requestError.message)
-      } finally {
-        setMoving(false)
-      }
+      setMudancaEtapaModal({
+        oportunidade,
+        etapaOrigem,
+        etapaDestino,
+        etapaFunilId,
+      })
     },
-    [funil, etapaIdPorNome]
+    [etapaIdPorNome]
   )
+
+  const handleMudancaEtapaSuccess = async () => {
+    setMudancaEtapaModal(null)
+    await loadFunil({ silent: true })
+  }
 
   const handleDragStart = (event) => {
     const oportunidade = event.active.data.current?.oportunidade ?? findOportunidade(event.active.id)
@@ -163,7 +146,7 @@ function Funil({ onNewOportunidade, onViewOportunidade, onEditOportunidade, curr
   const handleDragEnd = async (event) => {
     setActiveCard(null)
     const { active, over } = event
-    if (!over || moving) return
+    if (!over || mudancaEtapaModal || perdidaModal) return
 
     const etapaDestino = resolveEtapaDestino(over.id, funil, etapasAtivas)
     const etapaOrigem = findEtapaOrigem(active.id, funil, etapasAtivas)
@@ -189,13 +172,13 @@ function Funil({ onNewOportunidade, onViewOportunidade, onEditOportunidade, curr
     <>
       <Header title="Funil de Vendas" subtitle="Arraste as oportunidades entre as etapas" />
       <div className="toolbar">
+        <FiltroResponsavel value={responsavelFilter} onChange={setResponsavelFilter} />
         <button type="button" className="primaryBtn" onClick={onNewOportunidade}>
           <Plus size={18} />
           Nova Oportunidade
         </button>
       </div>
       {error && <p className="formError">{error}</p>}
-      {moving && <p className="tableMessage">Atualizando etapa...</p>}
       {loading ? (
         <p className="tableMessage">Carregando funil...</p>
       ) : (
@@ -208,10 +191,11 @@ function Funil({ onNewOportunidade, onViewOportunidade, onEditOportunidade, curr
           <div className="kanbanBoard">
             <section className="kanban">
               {etapasAtivas.map((etapa) => {
-                const diasMedios = stageAverageDays[etapa] ?? 0
+                const diasMedios = tempoMedioPorEtapa[etapa] ?? null
                 const isPerdida = etapa === ETAPA_PERDIDA
                 const isBottleneck =
                   !etapasSemTempoMedio.has(etapa) &&
+                  diasMedios !== null &&
                   diasMedios === bottleneckDays &&
                   bottleneckDays > 0
 
@@ -242,6 +226,26 @@ function Funil({ onNewOportunidade, onViewOportunidade, onEditOportunidade, curr
           currentUser={currentUser}
           onClose={() => setPerdidaModal(null)}
           onSuccess={handlePerdidaSuccess}
+        />
+      )}
+      {mudancaEtapaModal && (
+        <ModalMudancaEtapaFunil
+          tituloOportunidade={mudancaEtapaModal.oportunidade.titulo}
+          etapaOrigem={mudancaEtapaModal.etapaOrigem}
+          etapaDestino={mudancaEtapaModal.etapaDestino}
+          onClose={() => setMudancaEtapaModal(null)}
+          onConfirm={async (interacao) => {
+            const { oportunidade, etapaFunilId } = mudancaEtapaModal
+            await updateOportunidade(
+              oportunidade.id,
+              buildUpdatePayload(oportunidade, etapaFunilId)
+            )
+            await createInteracaoForOportunidade(oportunidade.id, {
+              ...interacao,
+              usuarioId: currentUser?.id,
+            })
+            await handleMudancaEtapaSuccess()
+          }}
         />
       )}
     </>

@@ -2,6 +2,7 @@ import { apiRequest } from './apiClient.js'
 
 export const fetchTarefasByLead = (leadId, params = {}) => {
   const search = new URLSearchParams()
+  if (params.apenasLead) search.set('apenasLead', 'true')
   if (params.oportunidadeId) search.set('oportunidadeId', params.oportunidadeId)
   const query = search.toString()
   const suffix = query ? `?${query}` : ''

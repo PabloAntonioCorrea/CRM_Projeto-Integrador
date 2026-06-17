@@ -15,6 +15,19 @@ export const propostaInclude = {
   usuario: { select: { id: true, nome: true } },
 }
 
+export const propostaPdfInclude = {
+  usuario: { select: { id: true, nome: true, email: true, cargo: true } },
+  oportunidade: {
+    include: {
+      lead: {
+        select: { nome: true, empresa: true, email: true, telefone: true, cidade: true },
+      },
+      etapaFunil: { select: { nome: true } },
+      usuario: { select: { nome: true } },
+    },
+  },
+}
+
 export const mapPropostaToResponse = (proposta) => ({
   id: proposta.id,
   titulo: proposta.titulo,

@@ -2,6 +2,8 @@ import { apiRequest } from './apiClient.js'
 
 export const fetchUsuarios = () => apiRequest('/usuarios')
 
+export const fetchUsuariosOpcoes = () => apiRequest('/usuarios/opcoes')
+
 export const fetchUsuarioById = (id) => apiRequest(`/usuarios/${id}`)
 
 export const createUsuario = (payload) =>

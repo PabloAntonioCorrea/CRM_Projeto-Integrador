@@ -38,3 +38,14 @@ export const remove = async (request, response, next) => {
     next(error)
   }
 }
+
+export const downloadPdf = async (request, response, next) => {
+  try {
+    const { buffer, filename } = await propostasService.exportPropostaPdf(request.params.id)
+    response.setHeader('Content-Type', 'application/pdf')
+    response.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
+    response.send(buffer)
+  } catch (error) {
+    next(error)
+  }
+}

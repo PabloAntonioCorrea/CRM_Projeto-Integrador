@@ -13,6 +13,7 @@ async function main() {
   await prisma.proposta.deleteMany()
   await prisma.tarefa.deleteMany()
   await prisma.interacao.deleteMany()
+  await prisma.oportunidadeEtapaHistorico.deleteMany()
   await prisma.oportunidade.deleteMany()
   await prisma.lead.deleteMany()
   await prisma.motivoPerda.deleteMany()
@@ -121,29 +122,95 @@ async function main() {
       dataCriacao: new Date('2026-04-20T09:00:00'),
       usuarioId: pablo.id,
       leadId: leadTechSul.id,
+      etapaFunilId: etapas[2].id,
+    },
+  })
+
+  const oportunidadeAutomacao = await prisma.oportunidade.create({
+    data: {
+      titulo: 'Automação de Relatórios',
+      valorEstimado: 5700,
+      prioridade: 'Alta',
+      dataCriacao: new Date('2026-04-22T14:30:00'),
+      usuarioId: maria.id,
+      leadId: leadClinica.id,
+      etapaFunilId: etapas[5].id,
+    },
+  })
+
+  const oportunidadeConsultoria = await prisma.oportunidade.create({
+    data: {
+      titulo: 'Consultoria Comercial',
+      valorEstimado: 3200,
+      prioridade: 'Media',
+      dataCriacao: new Date('2026-03-15T11:00:00'),
+      usuarioId: pedro.id,
+      leadId: leadAgro.id,
       etapaFunilId: etapas[0].id,
     },
   })
 
-  await prisma.oportunidade.createMany({
+  await prisma.oportunidadeEtapaHistorico.createMany({
     data: [
       {
-        titulo: 'Automação de Relatórios',
-        valorEstimado: 5700,
-        prioridade: 'Alta',
-        dataCriacao: new Date('2026-04-22T14:30:00'),
-        usuarioId: maria.id,
-        leadId: leadClinica.id,
-        etapaFunilId: etapas[1].id,
+        oportunidadeId: oportunidadeCrm.id,
+        etapaFunilId: etapas[0].id,
+        entradaEm: new Date('2026-04-20T09:00:00'),
+        saidaEm: new Date('2026-04-24T18:00:00'),
       },
       {
-        titulo: 'Consultoria Comercial',
-        valorEstimado: 3200,
-        prioridade: 'Media',
-        dataCriacao: new Date('2026-03-15T11:00:00'),
-        usuarioId: pedro.id,
-        leadId: leadAgro.id,
+        oportunidadeId: oportunidadeCrm.id,
+        etapaFunilId: etapas[1].id,
+        entradaEm: new Date('2026-04-24T18:00:00'),
+        saidaEm: new Date('2026-05-02T10:00:00'),
+      },
+      {
+        oportunidadeId: oportunidadeCrm.id,
+        etapaFunilId: etapas[2].id,
+        entradaEm: new Date('2026-05-02T10:00:00'),
+        saidaEm: null,
+      },
+      {
+        oportunidadeId: oportunidadeAutomacao.id,
         etapaFunilId: etapas[0].id,
+        entradaEm: new Date('2026-04-22T14:30:00'),
+        saidaEm: new Date('2026-04-26T12:00:00'),
+      },
+      {
+        oportunidadeId: oportunidadeAutomacao.id,
+        etapaFunilId: etapas[1].id,
+        entradaEm: new Date('2026-04-26T12:00:00'),
+        saidaEm: new Date('2026-05-05T09:00:00'),
+      },
+      {
+        oportunidadeId: oportunidadeAutomacao.id,
+        etapaFunilId: etapas[2].id,
+        entradaEm: new Date('2026-05-05T09:00:00'),
+        saidaEm: new Date('2026-05-15T16:00:00'),
+      },
+      {
+        oportunidadeId: oportunidadeAutomacao.id,
+        etapaFunilId: etapas[3].id,
+        entradaEm: new Date('2026-05-15T16:00:00'),
+        saidaEm: new Date('2026-05-25T11:00:00'),
+      },
+      {
+        oportunidadeId: oportunidadeAutomacao.id,
+        etapaFunilId: etapas[4].id,
+        entradaEm: new Date('2026-05-25T11:00:00'),
+        saidaEm: new Date('2026-06-10T14:00:00'),
+      },
+      {
+        oportunidadeId: oportunidadeAutomacao.id,
+        etapaFunilId: etapas[5].id,
+        entradaEm: new Date('2026-06-10T14:00:00'),
+        saidaEm: null,
+      },
+      {
+        oportunidadeId: oportunidadeConsultoria.id,
+        etapaFunilId: etapas[0].id,
+        entradaEm: new Date('2026-03-15T11:00:00'),
+        saidaEm: null,
       },
     ],
   })

@@ -1,28 +1,36 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Header from '../components/layout/Header'
 import Metric from '../components/common/Metric'
 import { fetchDashboardStats } from '../services/dashboardService'
 
+const PeriodoOptions = [
+  { value: 3, label: 'Últimos 3 meses' },
+  { value: 6, label: 'Últimos 6 meses' },
+  { value: 12, label: 'Últimos 12 meses' },
+]
+
 function Dashboard() {
   const [stats, setStats] = useState(null)
+  const [meses, setMeses] = useState(6)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    const loadStats = async () => {
-      setLoading(true)
-      setError('')
-      try {
-        const data = await fetchDashboardStats()
-        setStats(data)
-      } catch (requestError) {
-        setError(requestError.message)
-      } finally {
-        setLoading(false)
-      }
+  const loadStats = useCallback(async () => {
+    setLoading(true)
+    setError('')
+    try {
+      const data = await fetchDashboardStats(meses)
+      setStats(data)
+    } catch (requestError) {
+      setError(requestError.message)
+    } finally {
+      setLoading(false)
     }
+  }, [meses])
+
+  useEffect(() => {
     loadStats()
-  }, [])
+  }, [loadStats])
 
   if (loading) {
     return (
@@ -48,8 +56,12 @@ function Dashboard() {
       <section className="filtersPanel">
         <label>
           <span>Período</span>
-          <select disabled>
-            <option>Últimos 6 meses (leads)</option>
+          <select value={meses} onChange={(event) => setMeses(Number(event.target.value))}>
+            {PeriodoOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
           </select>
         </label>
       </section>
@@ -69,12 +81,19 @@ function Dashboard() {
       </section>
       <section className="gridTwo">
         <div className="panel">
-          <h2>Leads por mês</h2>
+          <h2>Leads por mês (últimos {stats.meses ?? meses} meses)</h2>
           <div className="barChart">
             {stats.leadsPorMes.map((item) => (
-              <div key={item.label} className="barGroup">
-                <div style={{ height: `${item.height}%` }} className="bar" />
-                <span>{item.label}</span>
+              <div key={`${item.label}-${item.count}`} className="barGroup">
+                <span className={`barCount ${item.count === 0 ? 'barCountEmpty' : ''}`}>
+                  {item.count}
+                </span>
+                <div className="barTrack">
+                  {item.count > 0 && (
+                    <div className="bar" style={{ height: `${item.height}%` }} />
+                  )}
+                </div>
+                <span className="barLabel">{item.label}</span>
               </div>
             ))}
           </div>

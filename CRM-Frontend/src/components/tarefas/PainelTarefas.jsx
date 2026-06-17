@@ -8,7 +8,7 @@ import {
   fetchTarefasByOportunidade,
   toggleTarefaStatus,
 } from '../../services/tarefasService'
-import { fetchUsuarios } from '../../services/usuariosService'
+import { fetchUsuariosOpcoes } from '../../services/usuariosService'
 
 const defaultPrazo = () => {
   const date = new Date()
@@ -16,18 +16,17 @@ const defaultPrazo = () => {
   return date.toISOString().slice(0, 10)
 }
 
-const buildEmptyForm = (currentUser, oportunidadeId) => ({
+const buildEmptyForm = (currentUser) => ({
   titulo: '',
   descricao: '',
   dataPrazo: defaultPrazo(),
   usuarioId: currentUser?.id ? String(currentUser.id) : '',
-  oportunidadeId: oportunidadeId ? String(oportunidadeId) : '',
 })
 
-function PainelTarefas({ leadId, oportunidadeId, oportunidades = [], currentUser }) {
+function PainelTarefas({ leadId, oportunidadeId, currentUser }) {
   const [tarefas, setTarefas] = useState([])
   const [usuarios, setUsuarios] = useState([])
-  const [form, setForm] = useState(buildEmptyForm(currentUser, oportunidadeId))
+  const [form, setForm] = useState(buildEmptyForm(currentUser))
   const [showForm, setShowForm] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -40,7 +39,7 @@ function PainelTarefas({ leadId, oportunidadeId, oportunidades = [], currentUser
     try {
       const data = oportunidadeId
         ? await fetchTarefasByOportunidade(oportunidadeId)
-        : await fetchTarefasByLead(leadId)
+        : await fetchTarefasByLead(leadId, { apenasLead: true })
       setTarefas(data)
     } catch (requestError) {
       setError(requestError.message)
@@ -56,7 +55,7 @@ function PainelTarefas({ leadId, oportunidadeId, oportunidades = [], currentUser
   useEffect(() => {
     const loadUsuarios = async () => {
       try {
-        const data = await fetchUsuarios()
+        const data = await fetchUsuariosOpcoes()
         setUsuarios(data)
       } catch {
         setUsuarios([])
@@ -66,8 +65,8 @@ function PainelTarefas({ leadId, oportunidadeId, oportunidades = [], currentUser
   }, [])
 
   useEffect(() => {
-    setForm(buildEmptyForm(currentUser, oportunidadeId))
-  }, [currentUser, oportunidadeId])
+    setForm(buildEmptyForm(currentUser))
+  }, [currentUser])
 
   const handleChange = (event) => {
     const { name, value } = event.target
@@ -85,15 +84,12 @@ function PainelTarefas({ leadId, oportunidadeId, oportunidades = [], currentUser
         dataPrazo: form.dataPrazo,
         usuarioId: Number(form.usuarioId),
       }
-      if (!oportunidadeId && form.oportunidadeId) {
-        payload.oportunidadeId = Number(form.oportunidadeId)
-      }
       if (oportunidadeId) {
         await createTarefaForOportunidade(oportunidadeId, payload)
       } else {
         await createTarefaForLead(leadId, payload)
       }
-      setForm(buildEmptyForm(currentUser, oportunidadeId))
+      setForm(buildEmptyForm(currentUser))
       setShowForm(false)
       await loadTarefas()
     } catch (requestError) {
@@ -203,19 +199,6 @@ function PainelTarefas({ leadId, oportunidadeId, oportunidades = [], currentUser
               ))}
             </select>
           </label>
-          {!oportunidadeId && oportunidades.length > 0 && (
-            <label className="inputGroup">
-              <span>Oportunidade (opcional)</span>
-              <select name="oportunidadeId" value={form.oportunidadeId} onChange={handleChange}>
-                <option value="">Nenhuma</option>
-                {oportunidades.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.titulo}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
           <label className={`inputGroup ${oportunidadeId ? '' : 'fullLine'}`}>
             <span>Descrição (opcional)</span>
             <textarea name="descricao" value={form.descricao} onChange={handleChange} rows={3} />

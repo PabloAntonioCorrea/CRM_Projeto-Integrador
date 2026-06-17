@@ -139,9 +139,13 @@ export const listTarefasByLead = async (leadIdParam, query = {}) => {
   await assertLeadExists(leadId)
 
   const oportunidadeId = query.oportunidadeId ? parseId(query.oportunidadeId) : null
+  const apenasLead = query.apenasLead === 'true' || query.apenasLead === '1'
   const where = { leadId }
+
   if (oportunidadeId) {
     where.oportunidadeId = oportunidadeId
+  } else if (apenasLead) {
+    where.oportunidadeId = null
   }
 
   const tarefas = await prisma.tarefa.findMany({
@@ -188,7 +192,8 @@ export const createTarefaForLead = async (leadIdParam, body) => {
   }
 
   await assertLeadExists(leadId)
-  const data = await buildTarefaData(body, leadId)
+  const { oportunidadeId: _ignored, ...leadBody } = body
+  const data = await buildTarefaData(leadBody, leadId)
 
   const tarefa = await prisma.tarefa.create({
     data,
