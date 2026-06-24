@@ -19,9 +19,9 @@ import { getPriorityClass } from '../utils/priorityClass'
 
 
 
-function OportunidadeDetails({ setScreen, oportunidadeId, currentUser }) {
+function OportunidadeDetails({ setScreen, oportunidadeId, initialTab = 'timeline', currentUser }) {
 
-  const [activeTab, setActiveTab] = useState('timeline')
+  const [activeTab, setActiveTab] = useState(initialTab)
 
   const [oportunidade, setOportunidade] = useState(null)
 
@@ -82,7 +82,9 @@ function OportunidadeDetails({ setScreen, oportunidadeId, currentUser }) {
 
   }, [loadOportunidade])
 
-
+  useEffect(() => {
+    setActiveTab(initialTab)
+  }, [oportunidadeId, initialTab])
 
   const propostaRecente = propostas[0] ?? null
 

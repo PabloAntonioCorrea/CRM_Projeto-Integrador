@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Check, Plus, Trash2 } from 'lucide-react'
+import { Check, Edit, Plus, Trash2, X } from 'lucide-react'
 import {
   createTarefaForLead,
   createTarefaForOportunidade,
@@ -7,6 +7,7 @@ import {
   fetchTarefasByLead,
   fetchTarefasByOportunidade,
   toggleTarefaStatus,
+  updateTarefa,
 } from '../../services/tarefasService'
 import { fetchUsuariosOpcoes } from '../../services/usuariosService'
 
@@ -16,6 +17,13 @@ const defaultPrazo = () => {
   return date.toISOString().slice(0, 10)
 }
 
+const brDateToInput = (brDate) => {
+  if (!brDate) return defaultPrazo()
+  const [day, month, year] = brDate.split('/')
+  if (!day || !month || !year) return defaultPrazo()
+  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
+}
+
 const buildEmptyForm = (currentUser) => ({
   titulo: '',
   descricao: '',
@@ -23,10 +31,18 @@ const buildEmptyForm = (currentUser) => ({
   usuarioId: currentUser?.id ? String(currentUser.id) : '',
 })
 
+const buildFormFromTarefa = (tarefa, currentUser) => ({
+  titulo: tarefa.titulo ?? '',
+  descricao: tarefa.descricao ?? '',
+  dataPrazo: brDateToInput(tarefa.dataPrazo),
+  usuarioId: String(tarefa.usuarioId ?? currentUser?.id ?? ''),
+})
+
 function PainelTarefas({ leadId, oportunidadeId, currentUser }) {
   const [tarefas, setTarefas] = useState([])
   const [usuarios, setUsuarios] = useState([])
   const [form, setForm] = useState(buildEmptyForm(currentUser))
+  const [editingId, setEditingId] = useState(null)
   const [showForm, setShowForm] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -65,8 +81,32 @@ function PainelTarefas({ leadId, oportunidadeId, currentUser }) {
   }, [])
 
   useEffect(() => {
+    if (!editingId) {
+      setForm(buildEmptyForm(currentUser))
+    }
+  }, [currentUser, editingId])
+
+  const resetForm = () => {
     setForm(buildEmptyForm(currentUser))
-  }, [currentUser])
+    setEditingId(null)
+    setShowForm(false)
+  }
+
+  const openNewForm = () => {
+    if (showForm && !editingId) {
+      resetForm()
+      return
+    }
+    setEditingId(null)
+    setForm(buildEmptyForm(currentUser))
+    setShowForm(true)
+  }
+
+  const openEditForm = (tarefa) => {
+    setEditingId(tarefa.id)
+    setForm(buildFormFromTarefa(tarefa, currentUser))
+    setShowForm(true)
+  }
 
   const handleChange = (event) => {
     const { name, value } = event.target
@@ -84,13 +124,14 @@ function PainelTarefas({ leadId, oportunidadeId, currentUser }) {
         dataPrazo: form.dataPrazo,
         usuarioId: Number(form.usuarioId),
       }
-      if (oportunidadeId) {
+      if (editingId) {
+        await updateTarefa(editingId, payload)
+      } else if (oportunidadeId) {
         await createTarefaForOportunidade(oportunidadeId, payload)
       } else {
         await createTarefaForLead(leadId, payload)
       }
-      setForm(buildEmptyForm(currentUser))
-      setShowForm(false)
+      resetForm()
       await loadTarefas()
     } catch (requestError) {
       setError(requestError.message)
@@ -115,6 +156,9 @@ function PainelTarefas({ leadId, oportunidadeId, currentUser }) {
     setError('')
     try {
       await deleteTarefa(tarefa.id)
+      if (editingId === tarefa.id) {
+        resetForm()
+      }
       await loadTarefas()
     } catch (requestError) {
       setError(requestError.message)
@@ -154,6 +198,14 @@ function PainelTarefas({ leadId, oportunidadeId, currentUser }) {
       </div>
       <button
         type="button"
+        className="iconBtn"
+        onClick={() => openEditForm(tarefa)}
+        aria-label={`Editar ${tarefa.titulo}`}
+      >
+        <Edit size={18} />
+      </button>
+      <button
+        type="button"
         className="iconBtn dangerIcon"
         onClick={() => handleDelete(tarefa)}
         aria-label={`Excluir ${tarefa.titulo}`}
@@ -166,9 +218,9 @@ function PainelTarefas({ leadId, oportunidadeId, currentUser }) {
   return (
     <div className="leadTabContent">
       <div className="leadActionBar">
-        <button type="button" className="secondaryBtn" onClick={() => setShowForm((value) => !value)}>
+        <button type="button" className="secondaryBtn" onClick={openNewForm}>
           <Plus size={18} />
-          {showForm ? 'Fechar formulário' : 'Nova tarefa'}
+          {showForm && !editingId ? 'Fechar formulário' : 'Nova tarefa'}
         </button>
       </div>
 
@@ -204,8 +256,14 @@ function PainelTarefas({ leadId, oportunidadeId, currentUser }) {
             <textarea name="descricao" value={form.descricao} onChange={handleChange} rows={3} />
           </label>
           <div className="entityFormActions fullLine">
+            {editingId && (
+              <button type="button" className="secondaryBtn" onClick={resetForm}>
+                <X size={18} />
+                Cancelar edição
+              </button>
+            )}
             <button type="submit" className="primaryBtn" disabled={saving}>
-              {saving ? 'Salvando...' : 'Salvar tarefa'}
+              {saving ? 'Salvando...' : editingId ? 'Salvar alterações' : 'Salvar tarefa'}
             </button>
           </div>
         </form>

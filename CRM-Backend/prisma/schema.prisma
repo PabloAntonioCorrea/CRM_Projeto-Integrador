@@ -73,6 +73,16 @@ model MotivoPerda {
   @@map("motivo_perda")
 }
 
+model Cargo {
+  id        Int      @id @default(autoincrement()) @db.UnsignedInt
+  nome      String   @unique @db.VarChar(80)
+  ativo     Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("cargo")
+}
+
 model EtapaFunil {
   id            Int            @id @default(autoincrement()) @db.UnsignedInt
   nome          String         @unique @db.VarChar(80)

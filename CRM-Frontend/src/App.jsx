@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { SessionProvider } from './context/SessionContext'
 import Sidebar from './components/layout/Sidebar'
@@ -14,62 +14,119 @@ import Oportunidades from './screens/Oportunidades'
 import Relatorios from './screens/Relatorios'
 import UsuarioForm from './screens/UsuarioForm'
 import Usuarios from './screens/Usuarios'
+import {
+  buildNavigationPath,
+  createScreenNavigation,
+  getInitialNavigation,
+} from './utils/appNavigation'
 import { clearSessionUser, loadSessionUser, saveSessionUser } from './utils/authSession'
 import { adminOnlyScreens, isAdministrador } from './utils/userAccess'
 import './styles.css'
 
 function AppShell({ currentUser, onLogout }) {
-  const [screen, setScreen] = useState('dashboard')
-  const [editingLeadId, setEditingLeadId] = useState(null)
-  const [editingOportunidadeId, setEditingOportunidadeId] = useState(null)
-  const [viewingOportunidadeId, setViewingOportunidadeId] = useState(null)
-  const [editingUsuarioId, setEditingUsuarioId] = useState(null)
-  const [viewingLeadId, setViewingLeadId] = useState(null)
+  const [navigation, setNavigation] = useState(getInitialNavigation)
+
+  const {
+    screen,
+    editingLeadId,
+    viewingLeadId,
+    editingOportunidadeId,
+    viewingOportunidadeId,
+    editingUsuarioId,
+    activeTab,
+  } = navigation
+
+  const pushNavigation = useCallback((nextNavigation, replace = false) => {
+    const path = buildNavigationPath(nextNavigation)
+    if (replace) {
+      window.history.replaceState(nextNavigation, '', path)
+    } else {
+      window.history.pushState(nextNavigation, '', path)
+    }
+    setNavigation(nextNavigation)
+  }, [])
+
+  useEffect(() => {
+    const path = buildNavigationPath(navigation)
+    if (window.location.hash !== path) {
+      window.history.replaceState(navigation, '', path)
+    }
+  }, [])
+
+  useEffect(() => {
+    const handlePopState = (event) => {
+      if (event.state?.screen) {
+        setNavigation({ ...event.state })
+        return
+      }
+      setNavigation(getInitialNavigation())
+    }
+
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
+
+  const setScreen = useCallback(
+    (nextScreen) => {
+      pushNavigation(createScreenNavigation(nextScreen))
+    },
+    [pushNavigation]
+  )
+
   const openNewLead = () => {
-    setEditingLeadId(null)
-    setScreen('leadForm')
+    pushNavigation(createScreenNavigation('leadForm'))
   }
 
   const openEditLead = (leadId) => {
-    setEditingLeadId(leadId)
-    setScreen('leadForm')
+    pushNavigation({
+      ...createScreenNavigation('leadForm'),
+      editingLeadId: leadId,
+    })
   }
 
-  const openViewLead = (leadId) => {
-    setViewingLeadId(leadId)
-    setScreen('leadDetails')
+  const openViewLead = (leadId, tab = 'oportunidades') => {
+    pushNavigation({
+      ...createScreenNavigation('leadDetails'),
+      viewingLeadId: leadId,
+      activeTab: tab,
+    })
   }
 
   const openNewOportunidade = () => {
-    setEditingOportunidadeId(null)
-    setScreen('oportunidadeForm')
+    pushNavigation(createScreenNavigation('oportunidadeForm'))
   }
 
   const openEditOportunidade = (oportunidadeId) => {
-    setEditingOportunidadeId(oportunidadeId)
-    setScreen('oportunidadeForm')
+    pushNavigation({
+      ...createScreenNavigation('oportunidadeForm'),
+      editingOportunidadeId: oportunidadeId,
+    })
   }
 
-  const openViewOportunidade = (oportunidadeId) => {
-    setViewingOportunidadeId(oportunidadeId)
-    setScreen('oportunidadeDetails')
+  const openViewOportunidade = (oportunidadeId, tab = 'timeline') => {
+    pushNavigation({
+      ...createScreenNavigation('oportunidadeDetails'),
+      viewingOportunidadeId: oportunidadeId,
+      activeTab: tab,
+    })
   }
 
   const openNewUsuario = () => {
-    setEditingUsuarioId(null)
-    setScreen('usuarioForm')
+    pushNavigation(createScreenNavigation('usuarioForm'))
   }
 
   const openEditUsuario = (usuarioId) => {
-    setEditingUsuarioId(usuarioId)
-    setScreen('usuarioForm')
+    pushNavigation({
+      ...createScreenNavigation('usuarioForm'),
+      editingUsuarioId: usuarioId,
+    })
   }
 
   useEffect(() => {
     if (!isAdministrador(currentUser) && adminOnlyScreens.includes(screen)) {
-      setScreen('dashboard')
+      pushNavigation(createScreenNavigation('dashboard'), true)
     }
-  }, [screen, currentUser])
+  }, [screen, currentUser, pushNavigation])
 
   const screens = {
     dashboard: <Dashboard />,
@@ -86,6 +143,7 @@ function AppShell({ currentUser, onLogout }) {
       <LeadDetails
         setScreen={setScreen}
         leadId={viewingLeadId}
+        initialTab={activeTab ?? 'oportunidades'}
         onEditLead={openEditLead}
         onViewOportunidade={openViewOportunidade}
         currentUser={currentUser}
@@ -114,6 +172,7 @@ function AppShell({ currentUser, onLogout }) {
       <OportunidadeDetails
         setScreen={setScreen}
         oportunidadeId={viewingOportunidadeId}
+        initialTab={activeTab ?? 'timeline'}
         currentUser={currentUser}
       />
     ),
@@ -145,6 +204,7 @@ function App() {
   const handleLogout = () => {
     clearSessionUser()
     setSessionUser(null)
+    window.history.replaceState(null, '', window.location.pathname)
   }
 
   return sessionUser ? (

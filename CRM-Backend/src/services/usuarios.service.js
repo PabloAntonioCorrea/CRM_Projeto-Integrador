@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs'
 import { ErrorMessages } from '../config/constants.js'
 import prisma from '../lib/prisma.js'
+import { assertCargoAtivo } from './cargos.service.js'
 import { mapUsuarioToResponse, parsePerfilAcesso } from '../utils/usuarioMapper.js'
 
 const parseUsuarioId = (id) => {
@@ -9,7 +10,7 @@ const parseUsuarioId = (id) => {
   return parsed
 }
 
-const buildUsuarioData = async (body, { isUpdate = false } = {}) => {
+const buildUsuarioData = async (body, { isUpdate = false, existingCargo = null } = {}) => {
   const nome = body.nome?.trim()
   if (!nome) {
     const error = new Error(ErrorMessages.usuarioNomeRequired)
@@ -30,6 +31,8 @@ const buildUsuarioData = async (body, { isUpdate = false } = {}) => {
     error.statusCode = 400
     throw error
   }
+
+  await assertCargoAtivo(cargo, existingCargo)
 
   const perfilAcesso = parsePerfilAcesso(body.perfilAcesso ?? body.perfil)
   if (!perfilAcesso) {
@@ -115,7 +118,7 @@ export const updateUsuario = async (idParam, body) => {
     throw error
   }
 
-  const data = await buildUsuarioData(body, { isUpdate: true })
+  const data = await buildUsuarioData(body, { isUpdate: true, existingCargo: existing.cargo })
   await ensureEmailAvailable(data.email, id)
 
   if (!data.senha) {

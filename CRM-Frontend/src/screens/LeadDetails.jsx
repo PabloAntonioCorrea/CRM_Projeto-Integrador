@@ -5,8 +5,8 @@ import Header from '../components/layout/Header'
 import { fetchLeadById } from '../services/leadsService'
 import { getPriorityClass } from '../utils/priorityClass'
 
-function LeadDetails({ setScreen, leadId, onViewOportunidade, onEditLead, currentUser }) {
-  const [activeTab, setActiveTab] = useState('oportunidades')
+function LeadDetails({ setScreen, leadId, initialTab = 'oportunidades', onViewOportunidade, onEditLead, currentUser }) {
+  const [activeTab, setActiveTab] = useState(initialTab)
   const [lead, setLead] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -30,6 +30,10 @@ function LeadDetails({ setScreen, leadId, onViewOportunidade, onEditLead, curren
     }
     loadLead()
   }, [leadId])
+
+  useEffect(() => {
+    setActiveTab(initialTab)
+  }, [leadId, initialTab])
 
   const tabs = [
     { id: 'oportunidades', label: 'Oportunidades' },

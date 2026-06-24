@@ -3,7 +3,9 @@ import cors from 'cors'
 import express from 'express'
 import { Config } from './config/constants.js'
 import { errorHandler } from './middleware/errorHandler.js'
+import interacoesRoutes from './routes/interacoes.routes.js'
 import authRoutes from './routes/auth.routes.js'
+import cargosRoutes from './routes/cargos.routes.js'
 import dashboardRoutes from './routes/dashboard.routes.js'
 import etapasRoutes from './routes/etapas.routes.js'
 import leadsRoutes from './routes/leads.routes.js'
@@ -39,6 +41,7 @@ app.get('/', (_request, response) => {
       oportunidadeInteracoes: '/oportunidades/:oportunidadeId/interacoes',
       oportunidadePerder: 'POST /oportunidades/:id/perder',
       motivosPerda: '/motivos-perda',
+      cargos: '/cargos',
       leadTarefas: '/leads/:leadId/tarefas',
       oportunidadeTarefas: '/oportunidades/:oportunidadeId/tarefas',
       tarefas: '/tarefas',
@@ -58,9 +61,11 @@ app.use('/leads', leadsRoutes)
 app.use('/oportunidades', oportunidadesRoutes)
 app.use('/etapas-funil', etapasRoutes)
 app.use('/motivos-perda', motivosPerdaRoutes)
+app.use('/cargos', cargosRoutes)
 app.use('/tarefas', tarefasRoutes)
 app.use('/propostas', propostasRoutes)
 app.use('/relatorios', relatoriosRoutes)
+app.use('/interacoes', interacoesRoutes)
 app.use('/usuarios', usuariosRoutes)
 
 app.use(errorHandler)

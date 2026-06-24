@@ -3,6 +3,7 @@ import { Save, X } from 'lucide-react'
 import Field from '../components/common/Field'
 import Header from '../components/layout/Header'
 import ModalMudancaEtapaFunil from '../components/oportunidades/ModalMudancaEtapaFunil'
+import ModalMarcarPerdida from '../components/oportunidades/ModalMarcarPerdida'
 import { useSession } from '../context/SessionContext'
 import { createInteracaoForOportunidade } from '../services/interacoesService'
 import { fetchEtapasFunil } from '../services/etapasService'
@@ -13,6 +14,7 @@ import {
   updateOportunidade,
 } from '../services/oportunidadesService'
 import { fetchUsuariosOpcoes } from '../services/usuariosService'
+import { ETAPA_PERDIDA } from '../utils/funilDrag'
 import { formatValorFromAmount, maskValorInput, parseValorInputToAmount } from '../utils/currencyInput'
 
 const EmptyForm = {
@@ -32,6 +34,7 @@ function OportunidadeForm({ setScreen, oportunidadeId }) {
   const [etapas, setEtapas] = useState([])
   const [etapaOriginalId, setEtapaOriginalId] = useState('')
   const [mudancaEtapaModal, setMudancaEtapaModal] = useState(null)
+  const [perdidaModal, setPerdidaModal] = useState(false)
   const [pendingPayload, setPendingPayload] = useState(null)
   const [loading, setLoading] = useState(Boolean(oportunidadeId))
   const [saving, setSaving] = useState(false)
@@ -116,6 +119,10 @@ function OportunidadeForm({ setScreen, oportunidadeId }) {
 
     if (etapaAlterada) {
       setPendingPayload(payload)
+      if (getEtapaNome(form.etapaFunilId) === ETAPA_PERDIDA) {
+        setPerdidaModal(true)
+        return
+      }
       setMudancaEtapaModal({
         etapaOrigem: getEtapaNome(etapaOriginalId),
         etapaDestino: getEtapaNome(form.etapaFunilId),
@@ -157,6 +164,31 @@ function OportunidadeForm({ setScreen, oportunidadeId }) {
   const handleMudancaEtapaClose = () => {
     setMudancaEtapaModal(null)
     setPendingPayload(null)
+  }
+
+  const handlePerdidaClose = () => {
+    setPerdidaModal(false)
+    setPendingPayload(null)
+  }
+
+  const handlePerdidaSuccess = async () => {
+    if (!pendingPayload) {
+      setScreen('oportunidade')
+      return
+    }
+    setSaving(true)
+    setError('')
+    try {
+      const { etapaFunilId: _etapa, ...resto } = pendingPayload
+      await updateOportunidade(oportunidadeId, resto)
+      setPerdidaModal(false)
+      setPendingPayload(null)
+      setScreen('oportunidade')
+    } catch (requestError) {
+      setError(requestError.message)
+    } finally {
+      setSaving(false)
+    }
   }
 
   if (loading) {
@@ -262,6 +294,14 @@ function OportunidadeForm({ setScreen, oportunidadeId }) {
           etapaDestino={mudancaEtapaModal.etapaDestino}
           onClose={handleMudancaEtapaClose}
           onConfirm={handleMudancaEtapaConfirm}
+        />
+      )}
+      {perdidaModal && (
+        <ModalMarcarPerdida
+          oportunidade={{ id: oportunidadeId, titulo: form.titulo }}
+          currentUser={currentUser}
+          onClose={handlePerdidaClose}
+          onSuccess={handlePerdidaSuccess}
         />
       )}
     </>

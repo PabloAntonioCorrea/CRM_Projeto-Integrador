@@ -1,15 +1,11 @@
-import { useEffect, useState } from 'react'
-import { Save, X } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Save, Settings2, X } from 'lucide-react'
 import Field from '../components/common/Field'
 import Header from '../components/layout/Header'
+import ModalGerenciarCargos from '../components/usuarios/ModalGerenciarCargos'
+import { useSession } from '../context/SessionContext'
+import { fetchCargos } from '../services/cargosService'
 import { createUsuario, fetchUsuarioById, updateUsuario } from '../services/usuariosService'
-
-const CargoOptions = [
-  'Diretor Comercial',
-  'Segundo em comando',
-  'Assessor',
-  'Vendedor',
-]
 
 const EmptyForm = {
   nome: '',
@@ -20,20 +16,36 @@ const EmptyForm = {
 }
 
 function UsuarioForm({ setScreen, usuarioId }) {
+  const currentUser = useSession()
   const [form, setForm] = useState(EmptyForm)
-  const [loading, setLoading] = useState(Boolean(usuarioId))
+  const [cargos, setCargos] = useState([])
+  const [showGerenciarCargos, setShowGerenciarCargos] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const isEditing = Boolean(usuarioId)
+  const isAdmin = currentUser?.perfilAcesso === 'Administrador'
+
+  const loadCargos = useCallback(async () => {
+    try {
+      const data = await fetchCargos(true)
+      setCargos(data)
+    } catch {
+      setCargos([])
+    }
+  }, [])
 
   useEffect(() => {
-    const loadUsuario = async () => {
-      if (!usuarioId) {
-        setLoading(false)
-        return
-      }
+    const loadFormData = async () => {
       setError('')
       try {
+        await loadCargos()
+
+        if (!usuarioId) {
+          setForm({ ...EmptyForm })
+          return
+        }
+
         const usuario = await fetchUsuarioById(usuarioId)
         setForm({
           nome: usuario.nome ?? '',
@@ -48,8 +60,16 @@ function UsuarioForm({ setScreen, usuarioId }) {
         setLoading(false)
       }
     }
-    loadUsuario()
-  }, [usuarioId])
+    loadFormData()
+  }, [usuarioId, loadCargos])
+
+  const cargoOptions = useMemo(() => {
+    const nomes = cargos.map((item) => item.nome)
+    if (form.cargo && !nomes.includes(form.cargo)) {
+      return [form.cargo, ...nomes]
+    }
+    return nomes
+  }, [cargos, form.cargo])
 
   const handleChange = (event) => {
     const { name, value } = event.target
@@ -80,6 +100,20 @@ function UsuarioForm({ setScreen, usuarioId }) {
       setError(requestError.message)
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleCargosUpdated = async () => {
+    try {
+      const data = await fetchCargos(true)
+      setCargos(data)
+      setForm((current) => {
+        if (!current.cargo) return current
+        const stillValid = data.some((item) => item.nome === current.cargo)
+        return stillValid ? current : { ...current, cargo: '' }
+      })
+    } catch {
+      setCargos([])
     }
   }
 
@@ -131,13 +165,23 @@ function UsuarioForm({ setScreen, usuarioId }) {
               <span>Cargo</span>
               <select name="cargo" value={form.cargo} onChange={handleChange} required>
                 <option value="">Selecione</option>
-                {CargoOptions.map((cargo) => (
+                {cargoOptions.map((cargo) => (
                   <option key={cargo} value={cargo}>
                     {cargo}
                   </option>
                 ))}
               </select>
             </label>
+            {isAdmin && (
+              <button
+                type="button"
+                className="linkBtn fullLine"
+                onClick={() => setShowGerenciarCargos(true)}
+              >
+                <Settings2 size={16} />
+                Gerenciar cargos
+              </button>
+            )}
             <label className="inputGroup">
               <span>Perfil de acesso</span>
               <select name="perfil" value={form.perfil} onChange={handleChange}>
@@ -146,19 +190,36 @@ function UsuarioForm({ setScreen, usuarioId }) {
               </select>
             </label>
           </div>
+          {cargoOptions.length === 0 && (
+            <p className="formError">
+              {isAdmin
+                ? 'Nenhum cargo ativo. Use "Gerenciar cargos" para cadastrar.'
+                : 'Nenhum cargo disponível. Peça ao administrador cadastrar os cargos.'}
+            </p>
+          )}
           {error && <p className="formError">{error}</p>}
           <div className="formActions">
             <button type="button" className="secondaryBtn" onClick={() => setScreen('usuarios')}>
               <X size={18} />
               Cancelar
             </button>
-            <button type="submit" className="primaryBtn" disabled={saving}>
+            <button
+              type="submit"
+              className="primaryBtn"
+              disabled={saving || cargoOptions.length === 0}
+            >
               <Save size={18} />
               {saving ? 'Salvando...' : 'Salvar Usuário'}
             </button>
           </div>
         </form>
       </section>
+      {showGerenciarCargos && isAdmin && (
+        <ModalGerenciarCargos
+          onClose={() => setShowGerenciarCargos(false)}
+          onUpdated={handleCargosUpdated}
+        />
+      )}
     </>
   )
 }

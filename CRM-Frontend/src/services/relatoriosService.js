@@ -10,7 +10,8 @@ const buildQueryString = (params) => {
   return query ? `?${query}` : ''
 }
 
-export const fetchRelatorio = (params) => apiRequest(`/relatorios${buildQueryString(params)}`)
+export const fetchRelatorio = (params) =>
+  apiRequest(`/relatorios${buildQueryString(params)}`, { cache: 'no-store' })
 
 export const downloadRelatorioExcel = async (params) => {
   const response = await fetch(`${ApiConfig.baseUrl}/relatorios/export${buildQueryString(params)}`)

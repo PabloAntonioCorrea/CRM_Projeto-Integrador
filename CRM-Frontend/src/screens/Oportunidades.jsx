@@ -118,6 +118,7 @@ function Oportunidades({ setScreen, onNewOportunidade, onEditOportunidade, onVie
                         <TarefaPendenteTag
                           count={oportunidade.tarefasPendentes}
                           prazoMaisProximo={oportunidade.prazoMaisProximo}
+                          onClick={() => onViewOportunidade(oportunidade.id, 'tarefas')}
                         />
                       </div>
                     </td>

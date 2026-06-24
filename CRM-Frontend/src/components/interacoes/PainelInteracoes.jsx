@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
-import { MessageSquarePlus } from 'lucide-react'
+import { Edit, MessageSquarePlus, Trash2, X } from 'lucide-react'
 import {
   createInteracaoForLead,
   createInteracaoForOportunidade,
+  deleteInteracao,
   fetchInteracoesByLead,
   fetchInteracoesByOportunidade,
+  updateInteracao,
 } from '../../services/interacoesService'
 import { fetchUsuariosOpcoes } from '../../services/usuariosService'
 
@@ -22,6 +24,15 @@ const toDateTimeLocalValue = (date = new Date()) => {
   return local.toISOString().slice(0, 16)
 }
 
+const brDateTimeToInput = (brDateTime) => {
+  if (!brDateTime) return toDateTimeLocalValue()
+  const [datePart, timePart] = brDateTime.split(' ')
+  const [day, month, year] = datePart.split('/')
+  if (!day || !month || !year) return toDateTimeLocalValue()
+  const time = timePart ?? '00:00'
+  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${time}`
+}
+
 const buildEmptyForm = (currentUser, oportunidadeId) => ({
   tipo: 'Ligacao',
   descricao: '',
@@ -30,10 +41,19 @@ const buildEmptyForm = (currentUser, oportunidadeId) => ({
   oportunidadeId: oportunidadeId ? String(oportunidadeId) : '',
 })
 
+const buildFormFromInteracao = (interacao, currentUser, oportunidadeId) => ({
+  tipo: interacao.tipoDb ?? 'Ligacao',
+  descricao: interacao.descricao ?? '',
+  dataInteracao: brDateTimeToInput(interacao.dataInteracao),
+  usuarioId: String(interacao.usuarioId ?? currentUser?.id ?? ''),
+  oportunidadeId: String(interacao.oportunidadeId ?? oportunidadeId ?? ''),
+})
+
 function PainelInteracoes({ leadId, oportunidadeId, oportunidades = [], currentUser }) {
   const [interacoes, setInteracoes] = useState([])
   const [usuarios, setUsuarios] = useState([])
   const [form, setForm] = useState(buildEmptyForm(currentUser, oportunidadeId))
+  const [editingId, setEditingId] = useState(null)
   const [showForm, setShowForm] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -72,8 +92,32 @@ function PainelInteracoes({ leadId, oportunidadeId, oportunidades = [], currentU
   }, [])
 
   useEffect(() => {
+    if (!editingId) {
+      setForm(buildEmptyForm(currentUser, oportunidadeId))
+    }
+  }, [currentUser, oportunidadeId, editingId])
+
+  const resetForm = () => {
     setForm(buildEmptyForm(currentUser, oportunidadeId))
-  }, [currentUser, oportunidadeId])
+    setEditingId(null)
+    setShowForm(false)
+  }
+
+  const openNewForm = () => {
+    if (showForm && !editingId) {
+      resetForm()
+      return
+    }
+    setEditingId(null)
+    setForm(buildEmptyForm(currentUser, oportunidadeId))
+    setShowForm(true)
+  }
+
+  const openEditForm = (interacao) => {
+    setEditingId(interacao.id)
+    setForm(buildFormFromInteracao(interacao, currentUser, oportunidadeId))
+    setShowForm(true)
+  }
 
   const handleChange = (event) => {
     const { name, value } = event.target
@@ -94,13 +138,14 @@ function PainelInteracoes({ leadId, oportunidadeId, oportunidades = [], currentU
       if (!oportunidadeId && form.oportunidadeId) {
         payload.oportunidadeId = Number(form.oportunidadeId)
       }
-      if (oportunidadeId) {
+      if (editingId) {
+        await updateInteracao(editingId, payload)
+      } else if (oportunidadeId) {
         await createInteracaoForOportunidade(oportunidadeId, payload)
       } else {
         await createInteracaoForLead(leadId, payload)
       }
-      setForm(buildEmptyForm(currentUser, oportunidadeId))
-      setShowForm(false)
+      resetForm()
       await loadInteracoes()
     } catch (requestError) {
       setError(requestError.message)
@@ -109,16 +154,27 @@ function PainelInteracoes({ leadId, oportunidadeId, oportunidades = [], currentU
     }
   }
 
+  const handleDelete = async (interacao) => {
+    const confirmed = window.confirm('Excluir esta interação?')
+    if (!confirmed) return
+    setError('')
+    try {
+      await deleteInteracao(interacao.id)
+      if (editingId === interacao.id) {
+        resetForm()
+      }
+      await loadInteracoes()
+    } catch (requestError) {
+      setError(requestError.message)
+    }
+  }
+
   return (
     <div className="leadTabContent">
       <div className="leadActionBar">
-        <button
-          type="button"
-          className="secondaryBtn"
-          onClick={() => setShowForm((value) => !value)}
-        >
+        <button type="button" className="secondaryBtn" onClick={openNewForm}>
           <MessageSquarePlus size={18} />
-          {showForm ? 'Fechar formulário' : 'Registrar interação'}
+          {showForm && !editingId ? 'Fechar formulário' : 'Registrar interação'}
         </button>
       </div>
 
@@ -179,8 +235,14 @@ function PainelInteracoes({ leadId, oportunidadeId, oportunidades = [], currentU
             />
           </label>
           <div className="entityFormActions fullLine">
+            {editingId && (
+              <button type="button" className="secondaryBtn" onClick={resetForm}>
+                <X size={18} />
+                Cancelar edição
+              </button>
+            )}
             <button type="submit" className="primaryBtn" disabled={saving}>
-              {saving ? 'Salvando...' : 'Salvar interação'}
+              {saving ? 'Salvando...' : editingId ? 'Salvar alterações' : 'Salvar interação'}
             </button>
           </div>
         </form>
@@ -201,9 +263,29 @@ function PainelInteracoes({ leadId, oportunidadeId, oportunidades = [], currentU
                 <span>{item.dataInteracao}</span>
               </div>
               <p>{item.descricao}</p>
-              <div className="timelineMeta">
-                <span>{item.responsavel}</span>
-                {item.oportunidadeTitulo && <span> · {item.oportunidadeTitulo}</span>}
+              <div className="timelineMeta timelineCardFooter">
+                <span>
+                  {item.responsavel}
+                  {item.oportunidadeTitulo && ` · ${item.oportunidadeTitulo}`}
+                </span>
+                <div className="timelineCardActions">
+                  <button
+                    type="button"
+                    className="iconBtn"
+                    onClick={() => openEditForm(item)}
+                    aria-label="Editar interação"
+                  >
+                    <Edit size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    className="iconBtn dangerIcon"
+                    onClick={() => handleDelete(item)}
+                    aria-label="Excluir interação"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               </div>
             </article>
           ))}

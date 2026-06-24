@@ -257,6 +257,7 @@ function Leads({ setScreen, onEditLead, onNewLead, onViewLead }) {
                         <TarefaPendenteTag
                           count={lead.tarefasPendentes}
                           prazoMaisProximo={lead.prazoMaisProximo}
+                          onClick={() => onViewLead(lead.id, 'tarefas')}
                         />
                       </div>
                     </td>

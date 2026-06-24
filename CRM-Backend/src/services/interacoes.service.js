@@ -212,3 +212,47 @@ export const createInteracaoForOportunidade = async (oportunidadeIdParam, body) 
 
   return mapInteracaoToResponse(interacao)
 }
+
+export const updateInteracao = async (idParam, body) => {
+  const id = parseId(idParam)
+  if (!id) {
+    const error = new Error(ErrorMessages.invalidInteracaoId)
+    error.statusCode = 400
+    throw error
+  }
+
+  const existing = await prisma.interacao.findUnique({ where: { id } })
+  if (!existing) {
+    const error = new Error(ErrorMessages.interacaoNotFound)
+    error.statusCode = 404
+    throw error
+  }
+
+  const data = await buildInteracaoData(body, existing.leadId, existing.oportunidadeId)
+
+  const interacao = await prisma.interacao.update({
+    where: { id },
+    data,
+    include: interacaoInclude,
+  })
+
+  return mapInteracaoToResponse(interacao)
+}
+
+export const deleteInteracao = async (idParam) => {
+  const id = parseId(idParam)
+  if (!id) {
+    const error = new Error(ErrorMessages.invalidInteracaoId)
+    error.statusCode = 400
+    throw error
+  }
+
+  const existing = await prisma.interacao.findUnique({ where: { id } })
+  if (!existing) {
+    const error = new Error(ErrorMessages.interacaoNotFound)
+    error.statusCode = 404
+    throw error
+  }
+
+  await prisma.interacao.delete({ where: { id } })
+}

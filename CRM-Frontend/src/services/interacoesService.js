@@ -22,3 +22,14 @@ export const createInteracaoForOportunidade = (oportunidadeId, payload) =>
     method: 'POST',
     body: JSON.stringify(payload),
   })
+
+export const updateInteracao = (id, payload) =>
+  apiRequest(`/interacoes/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  })
+
+export const deleteInteracao = (id) =>
+  apiRequest(`/interacoes/${id}`, {
+    method: 'DELETE',
+  })

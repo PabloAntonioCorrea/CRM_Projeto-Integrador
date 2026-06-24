@@ -22,6 +22,7 @@ async function main() {
   await prisma.oportunidade.deleteMany()
   await prisma.lead.deleteMany()
   await prisma.motivoPerda.deleteMany()
+  await prisma.cargo.deleteMany()
   await prisma.etapaFunil.deleteMany()
   await prisma.usuario.deleteMany()
 
@@ -43,6 +44,16 @@ async function main() {
       { nome: 'Sem orçamento' },
       { nome: 'Sem resposta do cliente' },
       { nome: 'Prazo não atendido' },
+    ],
+  })
+
+  await prisma.cargo.createMany({
+    data: [
+      { nome: 'Administrador' },
+      { nome: 'Diretor Comercial' },
+      { nome: 'Segundo em comando' },
+      { nome: 'Assessor' },
+      { nome: 'Vendedor' },
     ],
   })
 

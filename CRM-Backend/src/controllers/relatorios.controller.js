@@ -2,6 +2,7 @@ import * as relatoriosService from '../services/relatorios.service.js'
 
 export const gerar = async (request, response, next) => {
   try {
+    response.setHeader('Cache-Control', 'no-store')
     const relatorio = await relatoriosService.gerarRelatorio(request.query)
     response.json(relatorio)
   } catch (error) {

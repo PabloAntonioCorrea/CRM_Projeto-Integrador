@@ -533,11 +533,14 @@ nav {
   font-size: 12px;
 }
 
-.dangerIcon {
+.dangerIcon,
+.actions .lucide-trash-2 {
   color: #dc2626;
+  cursor: pointer;
 }
 
-.dangerIcon:hover {
+.dangerIcon:hover,
+.actions .lucide-trash-2:hover {
   color: #b91c1c;
 }
 
@@ -798,6 +801,18 @@ th {
 .tag.task {
   background: #fef3c7;
   color: #92400e;
+  text-transform: none;
+}
+
+.tagBtn {
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  line-height: inherit;
+}
+
+.tagBtn:hover {
+  background: #fde68a;
 }
 
 .tableTitleCell {
@@ -1305,6 +1320,16 @@ th {
 .taskCard p {
   margin: 8px 0 0;
   color: #475569;
+}
+
+.timelineCardFooter {
+  margin-top: 8px;
+}
+
+.timelineCardActions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
 }
 
 .taskCard {

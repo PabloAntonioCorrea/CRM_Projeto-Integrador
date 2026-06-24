@@ -33,3 +33,9 @@ export const deleteTarefa = (id) =>
   apiRequest(`/tarefas/${id}`, {
     method: 'DELETE',
   })
+
+export const updateTarefa = (id, payload) =>
+  apiRequest(`/tarefas/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  })

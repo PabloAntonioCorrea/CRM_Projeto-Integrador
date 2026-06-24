@@ -46,3 +46,21 @@ export const createForOportunidade = async (request, response, next) => {
     next(error)
   }
 }
+
+export const update = async (request, response, next) => {
+  try {
+    const interacao = await interacoesService.updateInteracao(request.params.id, request.body)
+    response.json(interacao)
+  } catch (error) {
+    next(error)
+  }
+}
+
+export const remove = async (request, response, next) => {
+  try {
+    await interacoesService.deleteInteracao(request.params.id)
+    response.status(204).send()
+  } catch (error) {
+    next(error)
+  }
+}

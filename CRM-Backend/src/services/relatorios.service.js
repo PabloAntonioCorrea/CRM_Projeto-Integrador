@@ -2,8 +2,7 @@ import { ErrorMessages } from '../config/constants.js'
 import prisma from '../lib/prisma.js'
 import { parseDateInput } from '../utils/date.js'
 import { buildRelatorioExcelBuffer } from '../utils/relatorioExcel.js'
-
-const MS_PER_DAY = 1000 * 60 * 60 * 24
+import { calcularTempoMedioPorEtapa } from './oportunidadeEtapaHistorico.service.js'
 
 const formatDateQuery = (date) => date.toISOString().slice(0, 10)
 
@@ -100,40 +99,18 @@ const getPrincipalMotivoPerda = (oportunidades) => {
 }
 
 const buildTempoMedioPorEtapa = async (filters, excludedEtapaIds = []) => {
+  const query = filters.usuarioId ? { usuarioId: String(filters.usuarioId) } : {}
+  const tempoMedioMap = await calcularTempoMedioPorEtapa(query)
+
   const etapas = await prisma.etapaFunil.findMany({
     where: excludedEtapaIds.length > 0 ? { id: { notIn: excludedEtapaIds } } : undefined,
     orderBy: { ordem: 'asc' },
   })
 
-  const now = Date.now()
-  const resultado = []
-
-  for (const etapa of etapas) {
-    const oportunidades = await prisma.oportunidade.findMany({
-      where: {
-        etapaFunilId: etapa.id,
-        ...(filters.usuarioId ? { usuarioId: filters.usuarioId } : {}),
-      },
-      select: { dataCriacao: true },
-    })
-
-    if (oportunidades.length === 0) {
-      resultado.push({ etapa: etapa.nome, diasMedio: 0 })
-      continue
-    }
-
-    const totalDias = oportunidades.reduce((acc, item) => {
-      const diff = now - new Date(item.dataCriacao).getTime()
-      return acc + Math.max(0, Math.floor(diff / MS_PER_DAY))
-    }, 0)
-
-    resultado.push({
-      etapa: etapa.nome,
-      diasMedio: Math.round(totalDias / oportunidades.length),
-    })
-  }
-
-  return resultado
+  return etapas.map((etapa) => ({
+    etapa: etapa.nome,
+    diasMedio: tempoMedioMap[etapa.nome] ?? 0,
+  }))
 }
 
 export const gerarRelatorio = async (query) => {

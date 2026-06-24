@@ -1,6 +1,8 @@
 export const getTarefaPendenteLabel = (count) => {
-  if (count === 1) return '1 tarefa pendente'
-  return `${count} tarefas pendentes`
+  const total = Number(count) || 0
+  if (total === 1) return '1 Tarefa Pendente'
+  if (total > 1) return `${total} Tarefas Pendentes`
+  return ''
 }
 
 export const getTarefaPendenteTitle = (count, prazoMaisProximo) => {
