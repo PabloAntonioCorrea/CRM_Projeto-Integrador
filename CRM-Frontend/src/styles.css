@@ -1282,6 +1282,27 @@ th {
   margin-top: 14px;
 }
 
+.propostaForm {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.propostaFormTabs {
+  margin-bottom: 16px;
+}
+
+.propostaFormActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e2e8f0;
+}
+
 .leadActionBar {
   display: flex;
   gap: 10px;

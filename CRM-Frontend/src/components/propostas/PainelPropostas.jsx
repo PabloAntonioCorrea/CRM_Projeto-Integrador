@@ -24,6 +24,7 @@ const buildEmptyForm = (currentUser) => ({
   status: 'Rascunho',
   dataProposta: new Date().toISOString().slice(0, 10),
   usuarioId: currentUser?.id ? String(currentUser.id) : '',
+  observacoes: '',
 })
 
 const getStatusTagClass = (statusDb) => {
@@ -46,6 +47,7 @@ const buildFormFromProposta = (proposta, currentUser) => ({
   status: proposta.statusDb ?? 'Rascunho',
   dataProposta: brDateToInput(proposta.dataProposta) || new Date().toISOString().slice(0, 10),
   usuarioId: String(proposta.usuarioId ?? currentUser?.id ?? ''),
+  observacoes: proposta.observacoes ?? '',
 })
 
 function PainelPropostas({ oportunidadeId, currentUser, onPropostasChange }) {
@@ -53,6 +55,7 @@ function PainelPropostas({ oportunidadeId, currentUser, onPropostasChange }) {
   const [usuarios, setUsuarios] = useState([])
   const [form, setForm] = useState(buildEmptyForm(currentUser))
   const [editingId, setEditingId] = useState(null)
+  const [formTab, setFormTab] = useState('dados')
   const [showForm, setShowForm] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -99,6 +102,7 @@ function PainelPropostas({ oportunidadeId, currentUser, onPropostasChange }) {
   const resetForm = () => {
     setForm(buildEmptyForm(currentUser))
     setEditingId(null)
+    setFormTab('dados')
     setShowForm(false)
   }
 
@@ -108,12 +112,14 @@ function PainelPropostas({ oportunidadeId, currentUser, onPropostasChange }) {
       return
     }
     setEditingId(null)
+    setFormTab('dados')
     setForm(buildEmptyForm(currentUser))
     setShowForm(true)
   }
 
   const openEditForm = (proposta) => {
     setEditingId(proposta.id)
+    setFormTab('dados')
     setForm(buildFormFromProposta(proposta, currentUser))
     setShowForm(true)
   }
@@ -138,6 +144,7 @@ function PainelPropostas({ oportunidadeId, currentUser, onPropostasChange }) {
         status: form.status,
         dataProposta: form.dataProposta,
         usuarioId: Number(form.usuarioId),
+        observacoes: form.observacoes,
       }
       if (editingId) {
         await updateProposta(editingId, payload)
@@ -188,53 +195,90 @@ function PainelPropostas({ oportunidadeId, currentUser, onPropostasChange }) {
       </div>
 
       {showForm && (
-        <form className="interacaoForm formGrid" onSubmit={handleSubmit}>
-          <label className="inputGroup">
-            <span>Título</span>
-            <input name="titulo" value={form.titulo} onChange={handleChange} required />
-          </label>
-          <label className="inputGroup">
-            <span>Valor</span>
-            <input
-              name="valor"
-              value={form.valor}
-              onChange={handleValorChange}
-              placeholder="R$ 0,00"
-              required
-            />
-          </label>
-          <label className="inputGroup">
-            <span>Data</span>
-            <input
-              type="date"
-              name="dataProposta"
-              value={form.dataProposta}
-              onChange={handleChange}
-              required
-            />
-          </label>
-          <label className="inputGroup">
-            <span>Status</span>
-            <select name="status" value={form.status} onChange={handleChange} required>
-              {PropostaStatusOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="inputGroup">
-            <span>Responsável</span>
-            <select name="usuarioId" value={form.usuarioId} onChange={handleChange} required>
-              <option value="">Selecione</option>
-              {usuarios.map((usuario) => (
-                <option key={usuario.id} value={usuario.id}>
-                  {usuario.nome}
-                </option>
-              ))}
-            </select>
-          </label>
-          <div className="entityFormActions fullLine">
+        <form className="propostaForm" onSubmit={handleSubmit}>
+          <div className="leadTabs propostaFormTabs">
+            <button
+              type="button"
+              className={formTab === 'dados' ? 'leadTab active' : 'leadTab'}
+              onClick={() => setFormTab('dados')}
+            >
+              Dados
+            </button>
+            <button
+              type="button"
+              className={formTab === 'observacoes' ? 'leadTab active' : 'leadTab'}
+              onClick={() => setFormTab('observacoes')}
+            >
+              Observações
+            </button>
+          </div>
+
+          {formTab === 'dados' && (
+            <div className="interacaoForm formGrid">
+              <label className="inputGroup">
+                <span>Título</span>
+                <input name="titulo" value={form.titulo} onChange={handleChange} required />
+              </label>
+              <label className="inputGroup">
+                <span>Valor</span>
+                <input
+                  name="valor"
+                  value={form.valor}
+                  onChange={handleValorChange}
+                  placeholder="R$ 0,00"
+                  required
+                />
+              </label>
+              <label className="inputGroup">
+                <span>Data</span>
+                <input
+                  type="date"
+                  name="dataProposta"
+                  value={form.dataProposta}
+                  onChange={handleChange}
+                  required
+                />
+              </label>
+              <label className="inputGroup">
+                <span>Status</span>
+                <select name="status" value={form.status} onChange={handleChange} required>
+                  {PropostaStatusOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="inputGroup">
+                <span>Responsável</span>
+                <select name="usuarioId" value={form.usuarioId} onChange={handleChange} required>
+                  <option value="">Selecione</option>
+                  {usuarios.map((usuario) => (
+                    <option key={usuario.id} value={usuario.id}>
+                      {usuario.nome}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          )}
+
+          {formTab === 'observacoes' && (
+            <div className="interacaoForm formGrid">
+              <label className="inputGroup fullLine">
+                <span>Observações da proposta</span>
+                <textarea
+                  name="observacoes"
+                  value={form.observacoes}
+                  onChange={handleChange}
+                  rows={6}
+                  placeholder="Condições comerciais, escopo, prazos, observações para o cliente..."
+                />
+              </label>
+            </div>
+          )}
+
+          <div className="entityFormActions propostaFormActions">
             <button type="button" className="secondaryBtn" onClick={resetForm}>
               <X size={18} />
               Cancelar

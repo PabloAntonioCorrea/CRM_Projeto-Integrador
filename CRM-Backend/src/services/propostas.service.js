@@ -91,6 +91,7 @@ const buildPropostaData = async (body, oportunidadeId) => {
     valor,
     status,
     dataProposta,
+    observacoes: body.observacoes?.trim() || null,
     oportunidadeId,
     usuarioId,
   }

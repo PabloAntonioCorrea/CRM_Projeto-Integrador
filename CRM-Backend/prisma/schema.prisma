@@ -170,6 +170,7 @@ model Proposta {
   valor           Decimal        @default(0) @db.Decimal(12, 2)
   status          PropostaStatus @default(Rascunho)
   dataProposta    DateTime       @map("data_proposta") @db.Date
+  observacoes     String?        @db.Text
   oportunidadeId  Int            @map("oportunidade_id") @db.UnsignedInt
   usuarioId       Int            @map("usuario_id") @db.UnsignedInt
   createdAt       DateTime       @default(now()) @map("created_at")

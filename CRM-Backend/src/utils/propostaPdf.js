@@ -69,6 +69,11 @@ export const buildPropostaPdfBuffer = (proposta) => {
     drawField(doc, 'Data', dataFormatada)
     drawField(doc, 'Responsável', proposta.usuario?.nome)
 
+    if (proposta.observacoes?.trim()) {
+      drawSectionTitle(doc, 'Observações')
+      doc.font('Helvetica').text(proposta.observacoes.trim())
+    }
+
     drawSectionTitle(doc, 'Oportunidade')
     drawField(doc, 'Título', oportunidade?.titulo)
     drawField(doc, 'Etapa do funil', oportunidade?.etapaFunil?.nome)

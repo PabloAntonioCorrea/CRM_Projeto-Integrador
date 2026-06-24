@@ -36,6 +36,7 @@ export const mapPropostaToResponse = (proposta) => ({
   status: PropostaStatusLabels[proposta.status] ?? proposta.status,
   statusDb: proposta.status,
   dataProposta: formatDateBr(proposta.dataProposta),
+  observacoes: proposta.observacoes ?? null,
   oportunidadeId: proposta.oportunidadeId,
   usuarioId: proposta.usuarioId,
   responsavel: proposta.usuario?.nome ?? null,
