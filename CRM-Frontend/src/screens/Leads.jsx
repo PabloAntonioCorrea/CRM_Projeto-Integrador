@@ -134,8 +134,9 @@ function Leads({ setScreen, onEditLead, onNewLead, onViewLead }) {
             </button>
           </div>
           <p className="importHint">
-            Use Excel (.xlsx) para melhor resultado. A coluna <strong>nome</strong> é obrigatória. O
-            campo <strong>responsavel</strong> aceita e-mail ou nome do usuário cadastrado.
+            Aceita .xlsx e .csv (vírgula ou ponto e vírgula). A coluna <strong>nome</strong> é
+            obrigatória. O campo <strong>responsavel</strong> aceita e-mail ou nome do usuário
+            cadastrado.
           </p>
           <div className="formGrid">
             <label className="inputGroup">
